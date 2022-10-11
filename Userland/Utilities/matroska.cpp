@@ -9,10 +9,7 @@
 
 ErrorOr<int> serenity_main(Main::Arguments)
 {
-    auto document = Video::MatroskaReader::parse_matroska_from_file("/home/anon/Videos/test-webm.webm"sv);
-    if (!document) {
-        return Error::from_string_literal("Failed to parse :(");
-    }
+    auto document = TRY(Video::MatroskaReader::parse_matroska_from_file("/home/anon/Videos/test-webm.webm"sv));
 
     outln("DocType is {}", document->header().doc_type.characters());
     outln("DocTypeVersion is {}", document->header().doc_type_version);

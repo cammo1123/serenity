@@ -28,12 +28,13 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     auto app = TRY(GUI::Application::try_create(arguments));
     auto window = TRY(GUI::Window::try_create());
 
-    auto document = Video::MatroskaReader::parse_matroska_from_file(filename);
-    // FIXME: MatroskaReader should use ErrorOr
-    if (!document) {
-        outln("{} could not be read", filename);
+    auto document_or_error = Video::MatroskaReader::parse_matroska_from_file(filename);
+    if (document_or_error.is_error()) {
+        warnln("Failed to parse file: {}", document_or_error.error());
         return 1;
     }
+    auto document = document_or_error.release_value();
+
     auto const& optional_track = document->track_for_track_type(Video::TrackEntry::TrackType::Video);
     if (!optional_track.has_value())
         return 1;

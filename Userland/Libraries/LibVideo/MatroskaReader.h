@@ -10,7 +10,6 @@
 #include <AK/Debug.h>
 #include <AK/IntegralMath.h>
 #include <AK/NonnullOwnPtrVector.h>
-#include <AK/Optional.h>
 #include <AK/OwnPtr.h>
 
 namespace Video {
@@ -22,10 +21,10 @@ public:
     {
     }
 
-    static OwnPtr<MatroskaDocument> parse_matroska_from_file(StringView path);
-    static OwnPtr<MatroskaDocument> parse_matroska_from_data(u8 const*, size_t);
+    static ErrorOr<NonnullOwnPtr<MatroskaDocument>> parse_matroska_from_file(StringView path);
+    static ErrorOr<NonnullOwnPtr<MatroskaDocument>> parse_matroska_from_data(u8 const*, size_t);
 
-    OwnPtr<MatroskaDocument> parse();
+    ErrorOr<NonnullOwnPtr<MatroskaDocument>> parse();
 
 private:
     class Streamer {
@@ -64,13 +63,13 @@ private:
                 m_octets_read.last() += popped;
         }
 
-        Optional<u64> read_variable_size_integer(bool mask_length = true)
+        ErrorOr<u64> read_variable_size_integer(bool mask_length = true)
         {
             dbgln_if(MATROSKA_TRACE_DEBUG, "Reading from offset {:p}", m_data_ptr);
             auto length_descriptor = read_octet();
             dbgln_if(MATROSKA_TRACE_DEBUG, "Reading VINT, first byte is {:#02x}", length_descriptor);
             if (length_descriptor == 0)
-                return {};
+                return Error::from_string_literal("Invalid VINT length descriptor");
             size_t length = 0;
             while (length < 8) {
                 if (length_descriptor & (1u << (8 - length)))
@@ -79,7 +78,7 @@ private:
             }
             dbgln_if(MATROSKA_TRACE_DEBUG, "Reading VINT of total length {}", length);
             if (length > 8)
-                return {};
+                return Error::from_string_literal("Invalid VINT length");
 
             u64 result;
             if (mask_length)
@@ -90,7 +89,7 @@ private:
             for (size_t i = 1; i < length; i++) {
                 if (!has_octet()) {
                     dbgln_if(MATROSKA_TRACE_DEBUG, "Ran out of stream data");
-                    return {};
+                    return Error::from_string_literal("Ran out of stream data");
                 }
                 u8 next_octet = read_octet();
                 dbgln_if(MATROSKA_TRACE_DEBUG, "Read octet of {:#02x}", next_octet);
@@ -100,11 +99,11 @@ private:
             return result;
         }
 
-        Optional<i64> read_variable_sized_signed_integer()
+        ErrorOr<i64> read_variable_sized_signed_integer()
         {
             auto length_descriptor = read_octet();
             if (length_descriptor == 0)
-                return {};
+                return Error::from_string_literal("Invalid length descriptor");
             size_t length = 0;
             while (length < 8) {
                 if (length_descriptor & (1u << (8 - length)))
@@ -112,12 +111,12 @@ private:
                 length++;
             }
             if (length > 8)
-                return {};
+                return Error::from_string_literal("Invalid length");
 
             i64 result = length_descriptor & ~(1u << (8 - length));
             for (size_t i = 1; i < length; i++) {
                 if (!has_octet()) {
-                    return {};
+                    return Error::from_string_literal("Ran out of stream data");
                 }
                 u8 next_octet = read_octet();
                 result = (result << 8u) | next_octet;
@@ -146,22 +145,22 @@ private:
         Vector<size_t> m_octets_read { 0 };
     };
 
-    bool parse_master_element(StringView element_name, Function<bool(u64 element_id)> element_consumer);
-    Optional<EBMLHeader> parse_ebml_header();
+    ErrorOr<void> parse_master_element(StringView element_name, Function<ErrorOr<void>(u64)> element_consumer);
+    ErrorOr<EBMLHeader> parse_ebml_header();
 
-    bool parse_segment_elements(MatroskaDocument&);
-    OwnPtr<SegmentInformation> parse_information();
+    ErrorOr<void> parse_segment_elements(MatroskaDocument&);
+    ErrorOr<NonnullOwnPtr<SegmentInformation>> parse_information();
 
-    bool parse_tracks(MatroskaDocument&);
-    OwnPtr<TrackEntry> parse_track_entry();
-    Optional<TrackEntry::VideoTrack> parse_video_track_information();
-    Optional<TrackEntry::AudioTrack> parse_audio_track_information();
-    OwnPtr<Cluster> parse_cluster();
-    OwnPtr<Block> parse_simple_block();
+    ErrorOr<void> parse_tracks(MatroskaDocument&);
+    ErrorOr<NonnullOwnPtr<TrackEntry>> parse_track_entry();
+    ErrorOr<TrackEntry::VideoTrack> parse_video_track_information();
+    ErrorOr<TrackEntry::AudioTrack> parse_audio_track_information();
+    ErrorOr<NonnullOwnPtr<Cluster>> parse_cluster();
+    ErrorOr<NonnullOwnPtr<Block>> parse_simple_block();
 
-    Optional<String> read_string_element();
-    Optional<u64> read_u64_element();
-    bool read_unknown_element();
+    ErrorOr<String> read_string_element();
+    ErrorOr<u64> read_u64_element();
+    ErrorOr<void> read_unknown_element();
 
     Streamer m_streamer;
 };

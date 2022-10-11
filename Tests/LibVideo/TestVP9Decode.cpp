@@ -11,8 +11,9 @@
 
 TEST_CASE(webm_in_vp9)
 {
-    auto matroska_document = Video::MatroskaReader::MatroskaReader::parse_matroska_from_file("./vp9_in_webm.webm"sv);
-    VERIFY(matroska_document);
+    auto matroska_document_or_error = Video::MatroskaReader::MatroskaReader::parse_matroska_from_file("./vp9_in_webm.webm"sv);
+    VERIFY(!matroska_document_or_error.is_error());
+    auto matroska_document = matroska_document_or_error.release_value();
     auto video_track_optional = matroska_document->track_for_track_type(Video::TrackEntry::TrackType::Video);
     VERIFY(video_track_optional.has_value());
     auto video_track_entry = video_track_optional.value();
