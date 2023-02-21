@@ -1,38 +1,48 @@
 set(SOURCES
-    AnonymousBuffer.cpp
-    ArgsParser.cpp
-    Command.cpp
-    ConfigFile.cpp
-    DateTime.cpp
-    Directory.cpp
-    DirIterator.cpp
-    ElapsedTimer.cpp
-    Event.cpp
-    EventLoop.cpp
-    File.cpp
+	ArgsParser.cpp
+	EventLoop.cpp
+	Event.cpp
     IODevice.cpp
-    LockFile.cpp
-    MappedFile.cpp
-    MimeData.cpp
-    NetworkJob.cpp
-    Notifier.cpp
-    Object.cpp
-    Process.cpp
-    ProcessStatisticsReader.cpp
-    Property.cpp
-    SecretString.cpp
-    SessionManagement.cpp
-    SOCKSProxyClient.cpp
-    StandardPaths.cpp
-    Stream.cpp
-    System.cpp
-    SystemServerTakeover.cpp
-    TCPServer.cpp
-    TempFile.cpp
-    Timer.cpp
-    UDPServer.cpp
-    Version.cpp
+	Property.cpp
+	Object.cpp
+	Version.cpp
 )
+if (NOT WIN32)
+	list(APPEND SOURCES
+		AnonymousBuffer.cpp
+	    Command.cpp
+	    ConfigFile.cpp
+	    DateTime.cpp
+	    Directory.cpp
+	    DirIterator.cpp
+	    ElapsedTimer.cpp
+	    File.cpp
+	    LockFile.cpp
+	    MappedFile.cpp
+	    MimeData.cpp
+	    NetworkJob.cpp
+	    Notifier.cpp
+	    Process.cpp
+	    ProcessStatisticsReader.cpp
+	    SecretString.cpp
+	    SessionManagement.cpp
+	    SOCKSProxyClient.cpp
+	    StandardPaths.cpp
+	    Stream.cpp
+	    System.cpp
+	    SystemServerTakeover.cpp
+	    TCPServer.cpp
+	    TempFile.cpp
+	    Timer.cpp
+	    UDPServer.cpp
+	)
+else()
+	list(APPEND SOURCES
+		Windows/System.cpp
+		Windows/File.cpp	    
+		Windows/Stream.cpp
+	)
+endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)
     list(APPEND SOURCES
         Account.cpp

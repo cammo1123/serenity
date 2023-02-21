@@ -4,6 +4,13 @@ function(lagom_tool tool)
     # alias for parity with exports
     add_executable(Lagom::${tool} ALIAS ${tool})
     target_link_libraries(${tool} LibCore ${LAGOM_TOOL_LIBS})
+	
+	#copy liblagom-core.dll to the build directory
+	add_custom_command(TARGET ${tool} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+		${CMAKE_SOURCE_DIR}/../../../serenity/Build/lagom/Userland/Libraries/LibCore/liblagom-core.dll
+		$<TARGET_FILE_DIR:${tool}>)	
+	
     install(
         TARGETS ${tool}
         EXPORT LagomTargets

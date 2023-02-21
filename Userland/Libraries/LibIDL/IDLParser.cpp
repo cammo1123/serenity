@@ -13,6 +13,9 @@
 #include <AK/QuickSort.h>
 #include <LibCore/File.h>
 #include <LibCore/Stream.h>
+#ifdef interface
+#    undef interface
+#endif
 
 [[noreturn]] static void report_parsing_error(StringView message, StringView filename, StringView input, size_t offset)
 {

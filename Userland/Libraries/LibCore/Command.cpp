@@ -6,11 +6,15 @@
 
 #include "Command.h"
 #include <AK/Format.h>
+#include <AK/Platform.h>
 #include <AK/ScopeGuard.h>
 #include <LibCore/File.h>
 #include <fcntl.h>
-#include <stdio.h>
+#if !defined(AK_OS_WINDOWS)
+#include <spawn.h>
 #include <sys/wait.h>
+#endif
+#include <stdio.h>
 #include <unistd.h>
 
 namespace Core {

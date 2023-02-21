@@ -22,6 +22,7 @@
 #ifdef major
 #    undef major
 #endif
+#include <AK/Windows.h>
 
 namespace Archive {
 

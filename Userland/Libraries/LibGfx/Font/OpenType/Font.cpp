@@ -16,7 +16,6 @@
 #include <LibGfx/Font/OpenType/Tables.h>
 #include <LibTextCodec/Decoder.h>
 #include <math.h>
-#include <sys/mman.h>
 
 namespace OpenType {
 

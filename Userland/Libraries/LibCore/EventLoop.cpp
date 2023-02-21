@@ -30,8 +30,10 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/socket.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/select.h>
+#    include <sys/socket.h>
+#endif
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -78,6 +80,7 @@ thread_local bool EventLoop::s_wake_pipe_initialized { false };
 
 void EventLoop::initialize_wake_pipes()
 {
+	#if !defined(AK_OS_WINDOWS)
     if (!s_wake_pipe_initialized) {
 #if defined(SOCK_NONBLOCK)
         int rc = pipe2(s_wake_pipe_fds, O_CLOEXEC);
@@ -90,6 +93,10 @@ void EventLoop::initialize_wake_pipes()
         VERIFY(rc == 0);
         s_wake_pipe_initialized = true;
     }
+	#else
+	dbgln("EventLoop::initialize_wake_pipes() not implemented");
+	VERIFY_NOT_REACHED();
+	#endif
 }
 
 bool EventLoop::has_been_instantiated()
@@ -680,6 +687,7 @@ void EventLoop::notify_forked(ForkEvent event)
 
 void EventLoop::wait_for_event(WaitMode mode)
 {
+#if !defined(AK_OS_WINDOWS)
     fd_set rfds;
     fd_set wfds;
 retry:
@@ -821,6 +829,11 @@ try_select_again:
                 post_event(*notifier, make<NotifierWriteEvent>(notifier->fd()));
         }
     }
+	#else
+	(void)mode;
+	dbgln("Core::EventLoop::wait_for_event: Not implemented");
+	VERIFY_NOT_REACHED();
+	#endif
 }
 
 bool EventLoopTimer::has_expired(Time const& now) const

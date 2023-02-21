@@ -12,6 +12,7 @@ namespace Core::Version {
 
 DeprecatedString read_long_version_string()
 {
+#if !defined(AK_OS_WINDOWS)
     auto result = Core::System::uname();
     if (result.is_error())
         return {};
@@ -20,6 +21,10 @@ DeprecatedString read_long_version_string()
     auto git_hash = result.value().version;
 
     return DeprecatedString::formatted("Version {} revision {}", version, git_hash);
+#else
+	dbgln("Core::Version::read_long_version_string() is not implemented on Windows");
+	VERIFY_NOT_REACHED();
+#endif
 }
 
 }

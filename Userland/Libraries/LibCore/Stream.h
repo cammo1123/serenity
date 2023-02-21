@@ -24,7 +24,12 @@
 #include <LibCore/SocketAddress.h>
 #include <LibIPC/Forward.h>
 #include <errno.h>
-#include <netdb.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <netdb.h>
+#else
+#    include <AK/Windows.h>
+#    define MSG_NOSIGNAL 0
+#endif
 
 namespace Core::Stream {
 

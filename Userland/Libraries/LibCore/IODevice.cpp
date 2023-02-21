@@ -6,11 +6,16 @@
  */
 
 #include <AK/ByteBuffer.h>
+#include <AK/Platform.h>
 #include <LibCore/IODevice.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#if !defined(AK_OS_WINDOWS)
 #include <sys/select.h>
+#else 
+#include <AK/Windows.h>
+#endif
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -283,7 +288,7 @@ bool IODevice::write(u8 const* data, int size)
     return rc == size;
 }
 
-void IODevice::set_fd(int fd)
+void IODevice::set_fd(SOCKET fd)
 {
     if (m_fd == fd)
         return;

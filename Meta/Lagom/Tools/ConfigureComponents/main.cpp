@@ -13,8 +13,10 @@
 #include <AK/Vector.h>
 #include <LibCore/ConfigFile.h>
 #include <LibCore/File.h>
-#include <spawn.h>
-#include <sys/ioctl.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <spawn.h>
+#    include <sys/ioctl.h>
+#endif
 #include <sys/wait.h>
 #include <unistd.h>
 

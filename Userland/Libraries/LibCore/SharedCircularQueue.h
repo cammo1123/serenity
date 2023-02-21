@@ -27,7 +27,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sched.h>
-#include <sys/mman.h>
 
 namespace Core {
 

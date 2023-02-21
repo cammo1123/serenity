@@ -12,16 +12,21 @@
 #include <LibCore/ArgsParser.h>
 #include <LibCore/System.h>
 #include <LibMain/Main.h>
-#include <arpa/inet.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <arpa/inet.h>
+#    include <netdb.h>
+#    include <netinet/in.h>
+#    include <sys/socket.h>
+#    include <sys/uio.h>
+#else
+#	define useconds_t long
+#endif
 #include <inttypes.h>
 #include <math.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/uio.h>
 #include <time.h>
 
 // An NtpTimestamp is a 64-bit integer that's a 32.32 binary-fixed point number.

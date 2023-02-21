@@ -9,7 +9,6 @@
 #include <AK/DeprecatedString.h>
 #include <AK/LexicalPath.h>
 #include <AK/Optional.h>
-#include <spawn.h>
 
 namespace Core {
 

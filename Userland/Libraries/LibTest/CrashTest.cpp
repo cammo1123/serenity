@@ -9,10 +9,12 @@
 #include <AK/Assertions.h>
 #include <AK/Platform.h>
 #include <LibTest/CrashTest.h>
-#include <sys/wait.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/wait.h>
+#endif
 #include <unistd.h>
 
-#if !defined(AK_OS_MACOS) && !defined(AK_OS_EMSCRIPTEN)
+#if !defined(AK_OS_MACOS) && !defined(AK_OS_EMSCRIPTEN) && !defined(AK_OS_WINDOWS)
 #    include <sys/prctl.h>
 #endif
 
@@ -27,6 +29,7 @@ Crash::Crash(DeprecatedString test_type, Function<Crash::Failure()> crash_functi
 
 bool Crash::run(RunType run_type)
 {
+#if !defined(AK_OS_WINDOWS)
     outln("\x1B[33mTesting\x1B[0m: \"{}\"", m_type);
 
     if (run_type == RunType::UsingCurrentProcess) {
@@ -57,6 +60,12 @@ bool Crash::run(RunType run_type)
         }
         VERIFY_NOT_REACHED();
     }
+#else
+(void)run_type;
+dbgln("LibTest::CrashTest::run() is not implemented on Windows");
+VERIFY_NOT_REACHED();
+#endif
+
 }
 
 bool Crash::do_report(Report report)
