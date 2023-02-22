@@ -11,7 +11,9 @@
 #include <AK/TemporaryChange.h>
 #include <LibLine/Editor.h>
 #include <stdio.h>
+#if !defined(AK_OS_WINDOWS)
 #include <sys/wait.h>
+#endif
 #include <unistd.h>
 
 namespace {
@@ -514,6 +516,7 @@ void Editor::uppercase_word()
 
 void Editor::edit_in_external_editor()
 {
+	#if !defined(AK_OS_WINDOWS)
     auto const* editor_command = getenv("EDITOR");
     if (!editor_command)
         editor_command = m_configuration.m_default_text_editor.characters();
@@ -589,5 +592,9 @@ void Editor::edit_in_external_editor()
                 insert(ch);
         }
     }
+	#else
+	dbgln("FIXME: Implement Editor::edit_in_external_editor() for Windows.");
+	VERIFY_NOT_REACHED();
+	#endif
 }
 }

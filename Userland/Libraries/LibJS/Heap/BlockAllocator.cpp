@@ -9,7 +9,10 @@
 #include <AK/Vector.h>
 #include <LibJS/Heap/BlockAllocator.h>
 #include <LibJS/Heap/HeapBlock.h>
-#include <sys/mman.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/mman.h>
+#endif
+
 
 #ifdef HAS_ADDRESS_SANITIZER
 #    include <sanitizer/asan_interface.h>
@@ -51,6 +54,9 @@ void* BlockAllocator::allocate_block([[maybe_unused]] char const* name)
 #ifdef AK_OS_SERENITY
     auto* block = (HeapBlock*)serenity_mmap(nullptr, HeapBlock::block_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_RANDOMIZED | MAP_PRIVATE, 0, 0, HeapBlock::block_size, name);
     VERIFY(block != MAP_FAILED);
+#elif defined(AK_OS_WINDOWS)
+    auto* block = (HeapBlock*)_aligned_malloc(HeapBlock::block_size, HeapBlock::block_size);
+	VERIFY(block);
 #else
     auto* block = (HeapBlock*)aligned_alloc(HeapBlock::block_size, HeapBlock::block_size);
     VERIFY(block);

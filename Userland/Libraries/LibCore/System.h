@@ -28,6 +28,8 @@
 #    include <termios.h>
 #else
 #    include <AK/Windows.h>
+#    include <AK/Windows/Types.h>
+#    include <AK/Windows/mman.h>
 #endif
 #include <signal.h>
 #include <sys/stat.h>

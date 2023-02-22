@@ -14,6 +14,11 @@
 #include <LibCore/Stream.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#if defined(AK_OS_WINDOWS)
+#    include <sys/stat.h>
+#    include <sys/types.h>
+#    include <io.h>
+#endif
 
 namespace Core {
 
@@ -35,7 +40,11 @@ public:
 
     static ErrorOr<Directory> create(LexicalPath path, CreateDirectories, mode_t creation_mode = 0755);
     static ErrorOr<Directory> create(DeprecatedString path, CreateDirectories, mode_t creation_mode = 0755);
+	#if !defined(AK_OS_WINDOWS)
     static ErrorOr<Directory> adopt_fd(int fd, Optional<LexicalPath> path = {});
+	#else
+	static ErrorOr<Directory> adopt_handle(HANDLE handle, Optional<LexicalPath> path = {});
+	#endif
 
     ErrorOr<NonnullOwnPtr<Stream::File>> open(StringView filename, Stream::OpenMode mode) const;
     ErrorOr<struct stat> stat() const;
@@ -45,14 +54,26 @@ public:
 
     ErrorOr<void> chown(uid_t, gid_t);
 
+#if !defined(AK_OS_WINDOWS)
     static ErrorOr<bool> is_valid_directory(int fd);
+#else
+	static ErrorOr<bool> is_valid_directory(HANDLE handle);
+#endif
 
 private:
+#if !defined(AK_OS_WINDOWS)
     Directory(int directory_fd, Optional<LexicalPath> path);
+#else
+	Directory(HANDLE directory_handle, Optional<LexicalPath> path);
+#endif
     static ErrorOr<void> ensure_directory(LexicalPath const& path, mode_t creation_mode = 0755);
 
     Optional<LexicalPath> m_path;
+#if !defined(AK_OS_WINDOWS)
     int m_directory_fd;
+#else
+	HANDLE m_directory_handle;
+#endif
 };
 
 }

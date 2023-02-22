@@ -9,6 +9,9 @@
 #include <AK/StringBuilder.h>
 #include <LibHTTP/HttpRequest.h>
 #include <LibHTTP/Job.h>
+#ifdef AK_OS_WINDOWS
+#    undef DELETE
+#endif
 
 namespace HTTP {
 

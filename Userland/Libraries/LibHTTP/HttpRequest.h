@@ -13,6 +13,9 @@
 #include <AK/URL.h>
 #include <AK/Vector.h>
 #include <LibCore/Forward.h>
+#ifdef AK_OS_WINDOWS
+#    undef DELETE
+#endif
 
 namespace HTTP {
 

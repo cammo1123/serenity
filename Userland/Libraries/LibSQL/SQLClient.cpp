@@ -17,6 +17,10 @@
 #    include <LibCore/Stream.h>
 #    include <LibCore/System.h>
 #endif
+#if defined(AK_OS_WINDOWS)
+#    include <Windows.h>
+#    include <winsock2.h>
+#endif
 
 namespace SQL {
 
@@ -30,6 +34,10 @@ static ErrorOr<int> create_database_socket(DeprecatedString const& socket_path)
 
 #    ifdef SOCK_NONBLOCK
     auto socket_fd = TRY(Core::System::socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0));
+#    elif defined(AK_OS_WINDOWS)
+    auto socket_fd = TRY(Core::System::socket(AF_UNIX, SOCK_STREAM, 0));
+    u_long option = 1;
+    ioctlsocket(socket_fd, FIONBIO, &option);
 #    else
     auto socket_fd = TRY(Core::System::socket(AF_LOCAL, SOCK_STREAM, 0));
 
@@ -38,7 +46,7 @@ static ErrorOr<int> create_database_socket(DeprecatedString const& socket_path)
     TRY(Core::System::fcntl(socket_fd, F_SETFD, FD_CLOEXEC));
 #    endif
 
-#    if !defined(AK_OS_MACOS) && !defined(AK_OS_FREEBSD) && !defined(AK_OS_OPENBSD)
+#    if !defined(AK_OS_MACOS) && !defined(AK_OS_FREEBSD) && !defined(AK_OS_OPENBSD) && !defined(AK_OS_WINDOWS)
     TRY(Core::System::fchmod(socket_fd, 0600));
 #    endif
 
@@ -53,6 +61,7 @@ static ErrorOr<int> create_database_socket(DeprecatedString const& socket_path)
 
 static ErrorOr<void> launch_server(DeprecatedString const& socket_path, DeprecatedString const& pid_path, Vector<String> candidate_server_paths)
 {
+#    if !defined(AK_OS_WINDOWS)
     auto server_fd_or_error = create_database_socket(socket_path);
     if (server_fd_or_error.is_error()) {
         warnln("Failed to create a database socket at {}: {}", socket_path, server_fd_or_error.error());
@@ -99,6 +108,14 @@ static ErrorOr<void> launch_server(DeprecatedString const& socket_path, Deprecat
 
     TRY(Core::System::waitpid(server_pid));
     return {};
+#    else
+	(void)create_database_socket;
+    (void)socket_path;
+    (void)pid_path;
+    (void)candidate_server_paths;
+    dbgln("SQLServer is not supported on Windows");
+	return {};
+#    endif
 }
 
 static ErrorOr<bool> should_launch_server(DeprecatedString const& pid_path)
@@ -128,11 +145,18 @@ static ErrorOr<bool> should_launch_server(DeprecatedString const& pid_path)
         TRY(Core::System::unlink(pid_path));
         return true;
     }
+
+#    if !defined(AK_OS_WINDOWS)
     if (kill(*pid, 0) < 0) {
         warnln("SQLServer PID file '{}' exists with PID {}, but process cannot be found", pid_path, *pid);
         TRY(Core::System::unlink(pid_path));
         return true;
     }
+#    else
+    (void)pid;
+    dbgln("SQLClient: should_launch_server not implemented");
+    VERIFY_NOT_REACHED();
+#    endif
 
     return false;
 }

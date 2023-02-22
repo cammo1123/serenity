@@ -8,7 +8,9 @@
 #include <LibCore/System.h>
 #include <LibIPC/Connection.h>
 #include <LibIPC/Stub.h>
+#if !defined(AK_OS_WINDOWS)
 #include <sys/select.h>
+#endif
 
 namespace IPC {
 

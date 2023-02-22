@@ -42,3 +42,7 @@ set(GENERATED_SOURCES
 
 serenity_lib(LibSQL sql)
 target_link_libraries(LibSQL PRIVATE LibCore LibIPC LibSyntax LibRegex)
+
+if (WIN32)
+	target_link_libraries(LibSQL PRIVATE ws2_32)
+endif()

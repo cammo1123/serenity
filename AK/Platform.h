@@ -70,6 +70,7 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #    define AK_OS_WINDOWS
+#    define _USE_MATH_DEFINES
 #endif
 
 #if defined(__ANDROID__)

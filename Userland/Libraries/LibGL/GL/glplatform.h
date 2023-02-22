@@ -10,6 +10,9 @@
 #    define GLAPI extern
 #endif
 #define GLAPIENTRY
+#ifdef APIENTRY
+#    undef APIENTRY
+#endif
 #define APIENTRY GLAPIENTRY
 #ifndef APIENTRYP
 #    define APIENTRYP APIENTRY*

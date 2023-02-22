@@ -24,6 +24,7 @@ inline double get_time_in_ms()
 template<typename Callback>
 inline void iterate_directory_recursively(DeprecatedString const& directory_path, Callback callback)
 {
+#if !defined(AK_OS_WINDOWS)
     Core::DirIterator directory_iterator(directory_path, Core::DirIterator::Flags::SkipDots);
 
     while (directory_iterator.has_next()) {
@@ -39,6 +40,12 @@ inline void iterate_directory_recursively(DeprecatedString const& directory_path
             callback(full_path);
         }
     }
+	#else
+	(void)directory_path;
+	(void)callback;
+	dbgln("iterate_directory_recursively not implemented on Windows");
+	VERIFY_NOT_REACHED();
+#endif
 }
 
 }

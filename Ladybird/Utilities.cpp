@@ -10,6 +10,7 @@
 #include <AK/LexicalPath.h>
 #include <AK/Platform.h>
 #include <LibCore/File.h>
+#include <LibCore/StandardPaths.h>
 #include <QCoreApplication>
 
 DeprecatedString s_serenity_resource_root;
@@ -40,8 +41,12 @@ void platform_init()
         if (source_dir) {
             return DeprecatedString::formatted("{}/Base", source_dir);
         }
+#    if !defined(AK_OS_WINDOWS)
         auto* home = getenv("XDG_CONFIG_HOME") ?: getenv("HOME");
         VERIFY(home);
+#    else
+        auto home = Core::StandardPaths::home_directory();
+#    endif
         auto home_lagom = DeprecatedString::formatted("{}/.lagom", home);
         if (Core::File::is_directory(home_lagom))
             return home_lagom;

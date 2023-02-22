@@ -16,10 +16,11 @@
 #if !defined(AK_OS_WINDOWS)
 #    include <spawn.h>
 #    include <sys/ioctl.h>
+#    include <sys/wait.h>
 #endif
-#include <sys/wait.h>
 #include <unistd.h>
 
+#if !defined(AK_OS_WINDOWS)
 enum class ComponentCategory {
     Optional,
     Recommended,
@@ -224,9 +225,11 @@ static bool run_system_command(DeprecatedString const& command, StringView comma
     }
     return true;
 }
+#endif
 
 int main()
 {
+#if !defined(AK_OS_WINDOWS)
     // Step 1: Check if everything is in order.
     if (!isatty(STDIN_FILENO)) {
         warnln("Not a terminal!");
@@ -367,5 +370,8 @@ int main()
         return 1;
     if (!run_system_command(command, "CMake"sv))
         return 1;
+#else
+    warnln("ConfigureComponents is not supported on this platform.");
+#endif
     return 0;
 }

@@ -80,24 +80,22 @@ thread_local bool EventLoop::s_wake_pipe_initialized { false };
 
 void EventLoop::initialize_wake_pipes()
 {
-	#if !defined(AK_OS_WINDOWS)
     if (!s_wake_pipe_initialized) {
 #if defined(SOCK_NONBLOCK)
         int rc = pipe2(s_wake_pipe_fds, O_CLOEXEC);
+#elif defined(AK_OS_WINDOWS)
+		dbgln("EventLoop::initialize_wake_pipes() not implemented on Windows");
+		int rc = _pipe(s_wake_pipe_fds, 0, O_BINARY);
 #else
         int rc = pipe(s_wake_pipe_fds);
         fcntl(s_wake_pipe_fds[0], F_SETFD, FD_CLOEXEC);
         fcntl(s_wake_pipe_fds[1], F_SETFD, FD_CLOEXEC);
-
 #endif
         VERIFY(rc == 0);
         s_wake_pipe_initialized = true;
     }
-	#else
-	dbgln("EventLoop::initialize_wake_pipes() not implemented");
-	VERIFY_NOT_REACHED();
-	#endif
 }
+
 
 bool EventLoop::has_been_instantiated()
 {

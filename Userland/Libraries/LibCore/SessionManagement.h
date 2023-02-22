@@ -8,6 +8,7 @@
 
 #include <AK/Error.h>
 #include <AK/Types.h>
+#include <AK/Windows/Types.h>
 
 namespace Core::SessionManagement {
 

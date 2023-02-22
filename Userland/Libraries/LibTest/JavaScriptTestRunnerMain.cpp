@@ -39,6 +39,7 @@ static StringView g_program_name { "test-js"sv };
 
 static void handle_sigabrt(int)
 {
+#if !defined(AK_OS_WINDOWS)
     dbgln("{}: SIGABRT received, cleaning up.", g_program_name);
     Test::cleanup();
     struct sigaction act;
@@ -51,6 +52,10 @@ static void handle_sigabrt(int)
         exit(1);
     }
     abort();
+#else
+    dbgln("{}: SIGABRT received, but we can't clean up on Windows.", g_program_name);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 int main(int argc, char** argv)

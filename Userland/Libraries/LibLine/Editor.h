@@ -31,9 +31,19 @@
 #include <LibLine/SuggestionDisplay.h>
 #include <LibLine/SuggestionManager.h>
 #include <LibLine/VT.h>
-#include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <termios.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/ioctl.h>
+#    include <termios.h>
+#else 
+#    include <AK/Windows/termios.h>
+struct winsize {
+	unsigned short ws_row;
+	unsigned short ws_col;
+	unsigned short ws_xpixel;
+	unsigned short ws_ypixel;
+};
+#endif
 
 namespace Line {
 

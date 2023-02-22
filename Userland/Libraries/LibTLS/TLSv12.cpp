@@ -18,8 +18,12 @@
 #include <LibTLS/TLSv12.h>
 #include <errno.h>
 
-#ifndef SOCK_NONBLOCK
-#    include <sys/ioctl.h>
+#if defined(AK_OS_WINDOWS)
+#    include <winsock2.h>
+#else
+#    ifndef SOCK_NONBLOCK
+#        include <sys/ioctl.h>
+#    endif
 #endif
 
 namespace TLS {

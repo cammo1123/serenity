@@ -24,7 +24,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/mman.h>
 
 namespace Gfx {
 
@@ -486,8 +485,7 @@ void Bitmap::invert()
 Bitmap::~Bitmap()
 {
     if (m_needs_munmap) {
-        int rc = munmap(m_data, size_in_bytes());
-        VERIFY(rc == 0);
+        MUST(Core::System::munmap(m_data, size_in_bytes()));
     }
     m_data = nullptr;
     delete[] m_palette;
@@ -557,6 +555,7 @@ Gfx::ShareableBitmap Bitmap::to_shareable_bitmap() const
 
 ErrorOr<BackingStore> Bitmap::allocate_backing_store(BitmapFormat format, IntSize size, int scale_factor)
 {
+#if !defined(AK_OS_WINDOWS)
     if (size_would_overflow(format, size, scale_factor))
         return Error::from_string_literal("Gfx::Bitmap backing store size overflow");
 
@@ -573,6 +572,14 @@ ErrorOr<BackingStore> Bitmap::allocate_backing_store(BitmapFormat format, IntSiz
     if (data == MAP_FAILED)
         return Error::from_errno(errno);
     return BackingStore { data, pitch, data_size_in_bytes };
+#else
+	(void)format;
+	(void)size;
+	(void)scale_factor;
+	dbgln("FIXME: Implement Bitmap::allocate_backing_store() for Windows");
+	VERIFY_NOT_REACHED();
+#endif
+	
 }
 
 void Bitmap::allocate_palette_from_format(BitmapFormat format, Vector<ARGB32> const& source_palette)

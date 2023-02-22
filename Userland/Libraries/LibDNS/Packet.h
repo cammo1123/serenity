@@ -12,6 +12,9 @@
 #include <AK/Optional.h>
 #include <AK/Types.h>
 #include <AK/Vector.h>
+#if defined(AK_OS_WINDOWS)
+#    undef NOERROR
+#endif
 
 namespace DNS {
 

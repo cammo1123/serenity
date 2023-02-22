@@ -9,6 +9,7 @@
 #include <LibGfx/ICC/Tags.h>
 #include <math.h>
 #include <time.h>
+#include <AK/Windows.h>
 
 // V2 spec: https://color.org/specification/ICC.1-2001-04.pdf
 // V4 spec: https://color.org/specification/ICC.1-2022-05.pdf

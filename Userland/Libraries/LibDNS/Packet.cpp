@@ -11,7 +11,11 @@
 #include <AK/Debug.h>
 #include <AK/MemoryStream.h>
 #include <AK/StringBuilder.h>
-#include <arpa/inet.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <arpa/inet.h>
+#else
+#	include <winsock2.h>
+#endif
 
 namespace DNS {
 

@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Format.h"
 #include "Namespaces.h"
 #include <AK/LexicalPath.h>
 #include <AK/Queue.h>
@@ -200,6 +201,7 @@ static void generate_include_for(auto& generator, auto& path)
 {
     auto forked_generator = generator.fork();
     auto path_string = path;
+#if !defined(AK_OS_WINDOWS)
     for (auto& search_path : s_header_search_paths) {
         if (!path.starts_with(search_path))
             continue;
@@ -210,6 +212,9 @@ static void generate_include_for(auto& generator, auto& path)
 
     LexicalPath include_path { path_string };
     forked_generator.set("include.path", DeprecatedString::formatted("{}/{}.h", include_path.dirname(), include_path.title()));
+#else
+	forked_generator.set("include.path", path_string.replace(".idl"sv, ".h"sv, ReplaceMode::All));
+#endif
     forked_generator.append(R"~~~(
 #include <@include.path@>
 )~~~");
@@ -2096,8 +2101,9 @@ void generate_constructor_implementation(IDL::Interface const& interface, String
 
 )~~~");
 
-    for (auto& path : interface.required_imported_paths)
+    for (auto& path : interface.required_imported_paths) {
         generate_include_for(generator, path);
+    }
 
     emit_includes_for_all_imports(interface, generator, interface.pair_iterator_types.has_value());
 

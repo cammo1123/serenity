@@ -11,8 +11,10 @@
 #include <LibCore/ConfigFile.h>
 #include <LibCore/Directory.h>
 #include <LibCore/StandardPaths.h>
-#include <LibCore/System.h>
-#include <pwd.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <LibCore/System.h>
+#    include <pwd.h>
+#endif
 #include <sys/types.h>
 
 namespace Core {

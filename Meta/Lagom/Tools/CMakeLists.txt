@@ -11,6 +11,18 @@ function(lagom_tool tool)
 		${CMAKE_SOURCE_DIR}/../../../serenity/Build/lagom/Userland/Libraries/LibCore/liblagom-core.dll
 		$<TARGET_FILE_DIR:${tool}>)	
 	
+	foreach (lib ${LAGOM_TOOL_LIBS})
+		if (lib MATCHES "Lib(.*)" AND lib MATCHES "LibIDL")
+			string(REGEX REPLACE "Lib(.*)" "liblagom-\\1.dll" libname ${lib})
+			string(TOLOWER ${libname} libname)
+			add_custom_command(TARGET ${tool} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy
+				${CMAKE_SOURCE_DIR}/../../../serenity/Build/lagom/Userland/Libraries/${lib}/${libname}
+				$<TARGET_FILE_DIR:${tool}>)
+		endif()
+	endforeach()
+	
+	
     install(
         TARGETS ${tool}
         EXPORT LagomTargets

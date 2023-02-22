@@ -26,8 +26,11 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
-#include <sys/ioctl.h>
-#include <sys/select.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/select.h>
+#else
+#    include <stdlib.h>
+#endif
 #include <sys/time.h>
 #include <unistd.h>
 
@@ -174,9 +177,11 @@ void Editor::set_default_keybinds()
     register_key_input_callback(Key { 'u', Key::Alt }, EDITOR_INTERNAL_FUNCTION(uppercase_word));
     register_key_input_callback(Key { 't', Key::Alt }, EDITOR_INTERNAL_FUNCTION(transpose_words));
 
+#if !defined(AK_OS_WINDOWS)
     // Register these last to all the user to override the previous key bindings
     // Normally ^W. `stty werase \^n` can change it to ^N (or something else).
     register_key_input_callback(m_termios.c_cc[VWERASE], EDITOR_INTERNAL_FUNCTION(erase_word_backwards));
+#endif
     // Normally ^U. `stty kill \^n` can change it to ^N (or something else).
     register_key_input_callback(m_termios.c_cc[VKILL], EDITOR_INTERNAL_FUNCTION(kill_line));
     register_key_input_callback(m_termios.c_cc[VERASE], EDITOR_INTERNAL_FUNCTION(erase_character_backwards));
@@ -216,6 +221,7 @@ void Editor::ensure_free_lines_from_origin(size_t count)
 
 void Editor::get_terminal_size()
 {
+#if !defined(AK_OS_WINDOWS)
     struct winsize ws;
     ioctl(STDERR_FILENO, TIOCGWINSZ, &ws);
     if (ws.ws_col == 0 || ws.ws_row == 0) {
@@ -228,6 +234,12 @@ void Editor::get_terminal_size()
     }
     m_num_columns = ws.ws_col;
     m_num_lines = ws.ws_row;
+#else
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_ERROR_HANDLE), &csbi);
+    m_num_columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    m_num_lines = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#endif
 }
 
 void Editor::add_to_history(DeprecatedString const& line)
@@ -569,9 +581,11 @@ void Editor::initialize()
             interrupted().release_value_but_fixme_should_propagate_errors();
         }));
 
+#if !defined(AK_OS_WINDOWS)
         m_signal_handlers.append(Core::EventLoop::register_signal(SIGWINCH, [this](int) {
             resized().release_value_but_fixme_should_propagate_errors();
         }));
+#endif
     }
 
     m_initialized = true;
@@ -683,6 +697,60 @@ ErrorOr<void> Editor::really_quit_event_loop()
     Core::EventLoop::current().quit(Exit);
     return {};
 }
+#if defined(AK_OS_WINDOWS)
+int getline(char** lineptr, size_t* n, FILE* stream)
+{
+    char* bufptr = NULL;
+    char* p = bufptr;
+    size_t size;
+    int c;
+
+    if (lineptr == NULL) {
+        return -1;
+    }
+    if (stream == NULL) {
+        return -1;
+    }
+    if (n == NULL) {
+        return -1;
+    }
+    bufptr = *lineptr;
+    size = *n;
+
+    c = fgetc(stream);
+    if (c == EOF) {
+        return -1;
+    }
+    if (bufptr == NULL) {
+		bufptr = (char *) malloc(128);
+        if (bufptr == NULL) {
+            return -1;
+        }
+        size = 128;
+    }
+    p = bufptr;
+    while (c != EOF) {
+        if ((p - bufptr) > (long long) (size - 1)) {
+            size = size + 128;
+            bufptr = (char *) realloc(bufptr, size);
+            if (bufptr == NULL) {
+                return -1;
+            }
+        }
+        *p++ = c;
+        if (c == '\n') {
+            break;
+        }
+        c = fgetc(stream);
+    }
+
+    *p++ = '\0';
+    *lineptr = bufptr;
+    *n = size;
+
+    return p - bufptr - 1;
+}
+#endif
 
 auto Editor::get_line(DeprecatedString const& prompt) -> Result<DeprecatedString, Editor::Error>
 {
@@ -2328,5 +2396,4 @@ bool Editor::Spans::contains_up_to_offset(Spans const& other, size_t offset) con
     return compare(m_spans_starting, other.m_spans_starting)
         && compare(m_anchored_spans_starting, other.m_anchored_spans_starting);
 }
-
 }

@@ -12,13 +12,17 @@
 #include <LibCore/SystemServerTakeover.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/socket.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/socket.h>
+#    ifndef SOCK_NONBLOCK
+#        include <sys/ioctl.h>
+#    endif
+#else
+#    include <winsock2.h>
+#	include <windows.h>
+#endif
 #include <sys/stat.h>
 #include <unistd.h>
-
-#ifndef SOCK_NONBLOCK
-#    include <sys/ioctl.h>
-#endif
 
 namespace Core {
 
@@ -74,6 +78,9 @@ bool LocalServer::listen(DeprecatedString const& address)
 
 #ifdef SOCK_NONBLOCK
     m_fd = socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+#elif defined(AK_OS_WINDOWS)
+	u_long option = 1;
+	ioctlsocket(m_fd, FIONBIO, &option);
 #else
     m_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
     int option = 1;
@@ -81,7 +88,7 @@ bool LocalServer::listen(DeprecatedString const& address)
     fcntl(m_fd, F_SETFD, FD_CLOEXEC);
 #endif
     VERIFY(m_fd >= 0);
-#ifndef AK_OS_MACOS
+#if !defined(AK_OS_MACOS ) && !defined(AK_OS_WINDOWS)
     rc = fchmod(m_fd, 0600);
     if (rc < 0) {
         perror("fchmod");
@@ -118,7 +125,7 @@ ErrorOr<NonnullOwnPtr<Stream::LocalSocket>> LocalServer::accept()
     VERIFY(m_listening);
     sockaddr_un un;
     socklen_t un_size = sizeof(un);
-#ifndef AK_OS_MACOS
+#if !defined(AK_OS_MACOS) && !defined(AK_OS_WINDOWS)
     int accepted_fd = ::accept4(m_fd, (sockaddr*)&un, &un_size, SOCK_NONBLOCK | SOCK_CLOEXEC);
 #else
     int accepted_fd = ::accept(m_fd, (sockaddr*)&un, &un_size);

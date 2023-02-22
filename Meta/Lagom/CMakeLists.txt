@@ -319,9 +319,6 @@ add_library(LibSystem INTERFACE)
 if (NOT APPLE AND NOT ANDROID AND NOT EMSCRIPTEN AND NOT ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD" AND NOT WIN32)
     target_link_libraries(LibCrypt INTERFACE crypt) # LibCore::Account uses crypt() but it's not in libcrypt on macOS
 endif()
-if (WIN32)
-	target_link_libraries(LibSystem INTERFACE ws2_32)
-endif()
 if (SERENITYOS)
     # Serenity only allows syscalls from LibSystem, so if someone asks for that on Lagom,
     # we need to pass that through to the system's LibSystem.
@@ -465,10 +462,19 @@ if (BUILD_LAGOM)
     if (ENABLE_UNICODE_DATABASE_DOWNLOAD)
         install(TARGETS LibLocaleData EXPORT LagomTargets)
     endif()
-
-    add_serenity_subdirectory(Userland/Shell)
-
+	
+	if (ENABLE_LAGOM_LIBWEB)
+		add_executable(headless-browser ../../Userland/Utilities/headless-browser.cpp ../../Userland/Services/WebContent/WebDriverConnection.cpp)
+		target_link_libraries(headless-browser LibWeb LibWebSocket LibCrypto LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS)
+	endif()
+	
+	if (ENABLE_LAGOM_LADYBIRD)
+		add_serenity_subdirectory(Ladybird)
+	endif()
+	
     if (NOT ENABLE_FUZZERS AND NOT ENABLE_COMPILER_EXPLORER_BUILD AND NOT ANDROID AND NOT WIN32)
+		add_serenity_subdirectory(Userland/Shell)
+
         # Lagom Services
         add_serenity_subdirectory(Userland/Services)
 
@@ -480,22 +486,13 @@ if (BUILD_LAGOM)
 
         # FIXME: Excluding arm64 is a temporary hack to circumvent a build problem
         #        for Lagom on Apple M1
-        if (NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm64" AND NOT EMSCRIPTEN)
+        if (NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm64" AND NOT EMSCRIPTEN AND NOT WIN32)
             add_executable(disasm ../../Userland/Utilities/disasm.cpp)
             target_link_libraries(disasm LibCore LibELF LibX86 LibMain)
         endif()
 
         add_executable(gml-format ../../Userland/Utilities/gml-format.cpp)
         target_link_libraries(gml-format LibCore LibGUI LibMain)
-
-        if (ENABLE_LAGOM_LIBWEB)
-            add_executable(headless-browser ../../Userland/Utilities/headless-browser.cpp ../../Userland/Services/WebContent/WebDriverConnection.cpp)
-            target_link_libraries(headless-browser LibWeb LibWebSocket LibCrypto LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS)
-        endif()
-
-        if (ENABLE_LAGOM_LADYBIRD)
-            add_serenity_subdirectory(Ladybird)
-        endif()
 
         add_executable(icc ../../Userland/Utilities/icc.cpp)
         target_link_libraries(icc LibCore LibGfx LibMain)
@@ -518,7 +515,7 @@ if (BUILD_LAGOM)
         add_executable(markdown-check ../../Userland/Utilities/markdown-check.cpp)
         target_link_libraries(markdown-check LibMarkdown LibMain)
 
-        if (NOT EMSCRIPTEN)
+        if (NOT EMSCRIPTEN AND NOT WIN32)
             add_executable(ntpquery ../../Userland/Utilities/ntpquery.cpp)
             target_link_libraries(ntpquery LibCore LibMain)
         endif()
@@ -545,13 +542,14 @@ if (BUILD_LAGOM)
             target_compile_definitions(test262-runner PRIVATE ASSERT_FAIL_HAS_INT)
         endif()
 
-        add_executable(wasm ../../Userland/Utilities/wasm.cpp)
-        target_link_libraries(wasm LibCore LibWasm LibLine LibMain)
-
+		
         add_executable(xml ../../Userland/Utilities/xml.cpp)
         target_link_libraries(xml LibCore LibXML LibMain)
-
-        enable_testing()
+		if (NOT WIN32)
+	        add_executable(wasm ../../Userland/Utilities/wasm.cpp)
+	        target_link_libraries(wasm LibCore LibWasm LibLine LibMain)
+		endif()
+		enable_testing()
         # LibTest
         file(GLOB LIBTEST_SOURCES CONFIGURE_DEPENDS "../../Userland/Libraries/LibTest/*.cpp")
         list(FILTER LIBTEST_SOURCES EXCLUDE REGEX ".*Main.cpp$")

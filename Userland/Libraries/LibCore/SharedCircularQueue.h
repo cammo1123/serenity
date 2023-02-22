@@ -63,7 +63,11 @@ public:
     // Allocates a new circular queue in shared memory.
     static ErrorOr<SharedSingleProducerCircularQueue<T, Size>> create()
     {
+#if !defined(AK_OS_WINDOWS)
         auto fd = TRY(System::anon_create(sizeof(SharedMemorySPCQ), O_CLOEXEC));
+#else
+        auto fd = TRY(System::anon_create(sizeof(SharedMemorySPCQ), 0));
+#endif
         return create_internal(fd, true);
     }
 
@@ -199,6 +203,7 @@ private:
 
     static ErrorOr<SharedSingleProducerCircularQueue<T, Size>> create_internal(int fd, bool is_new)
     {
+#if !defined(AK_OS_WINDOWS)
         auto name = DeprecatedString::formatted("SharedSingleProducerCircularQueue@{:x}", fd);
         auto* raw_mapping = TRY(System::mmap(nullptr, sizeof(SharedMemorySPCQ), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0, 0, name));
         dbgln_if(SHARED_QUEUE_DEBUG, "successfully mmapped {} at {:p}", name, raw_mapping);
@@ -209,6 +214,12 @@ private:
             return Error::from_string_literal("Unexpected error when creating shared queue from raw memory");
 
         return SharedSingleProducerCircularQueue<T, Size> { move(name), adopt_ref(*new (nothrow) RefCountedSharedMemorySPCQ(shared_queue, fd)) };
+#else
+        (void)fd;
+        (void)is_new;
+        dbgln("SharedSingleProducerCircularQueue implementation is not available on Windows");
+        VERIFY_NOT_REACHED();
+#endif
     }
 
     SharedSingleProducerCircularQueue(DeprecatedString name, RefPtr<RefCountedSharedMemorySPCQ> queue)

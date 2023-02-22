@@ -134,6 +134,43 @@ add_subdirectory(WebContent)
 add_subdirectory(WebDriver)
 add_dependencies(ladybird SQLServer WebContent WebDriver)
 
+set (LAGOM_TOOL_LIBS
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\liblagom-gui.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\liblagom-webview.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCore\\liblagom-core.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGfx\\liblagom-gfx.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibIPC\\liblagom-ipc.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibJS\\liblagom-js.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibSQL\\liblagom-sql.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWeb\\liblagom-web.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibSyntax\\liblagom-syntax.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWeb\\liblagom-web.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCompress\\liblagom-compress.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCrypto\\liblagom-crypto.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibTextCodec\\liblagom-textcodec.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibRegex\\liblagom-regex.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibLocale\\liblagom-locale.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibUnicode\\liblagom-unicode.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGemini\\liblagom-gemini.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGL\\liblagom\-gl.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibHTTP\\liblagom\-http.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibIDL\\liblagom\-idl.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibMarkdown\\liblagom-markdown.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWasm\\liblagom-wasm.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibXML\\liblagom-xml.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGLSL\\liblagom-glsl.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGPU\\liblagom-gpu.dll"
+	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibTLS\\liblagom-tls.dll"
+)
+set (tool ladybird)
+foreach (lib ${LAGOM_TOOL_LIBS})
+	message(STATUS "Adding ${lib} to ${tool}")
+	add_custom_command(TARGET ${tool} POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy
+		${lib}
+		$<TARGET_FILE_DIR:${tool}>)
+endforeach()
+
 if(NOT CMAKE_SKIP_INSTALL_RULES)
     include(cmake/InstallRules.cmake)
 endif()

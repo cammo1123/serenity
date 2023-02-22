@@ -86,7 +86,11 @@ ErrorOr<Dictionary> decode(Decoder& decoder)
 template<>
 ErrorOr<File> decode(Decoder& decoder)
 {
+	#if defined(O_CLOEXEC)
     int fd = TRY(decoder.socket().receive_fd(O_CLOEXEC));
+	#else
+	int fd = TRY(decoder.socket().receive_fd(0));
+	#endif
     return File { fd, File::ConstructWithReceivedFileDescriptor };
 }
 
