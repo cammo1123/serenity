@@ -620,7 +620,7 @@ void WebContentView::create_client()
     siStartInfo.cb = sizeof(STARTUPINFO);
     siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-    TCHAR szCmdline[] = TEXT("C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Ladybird\\WebContent\\WebContent.exe");
+    TCHAR szCmdline[] = TEXT("WebContent\\WebContent.exe");
     auto res = CreateProcess(NULL,
         szCmdline,
         nullptr,

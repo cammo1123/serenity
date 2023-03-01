@@ -63,7 +63,7 @@ if (ENABLE_LAGOM_CCACHE)
 endif()
 
 if (ENABLE_FUZZERS_LIBFUZZER OR ENABLE_FUZZERS_OSSFUZZ)
-	set(ENABLE_FUZZERS ON)
+    set(ENABLE_FUZZERS ON)
 endif()
 
 # We need to make sure not to build code generators for Fuzzer builds, as they already have their own main.cpp
@@ -149,7 +149,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         message(FATAL_ERROR
             "Fuzzer Sanitizer (-fsanitize=fuzzer) is only supported for Fuzzer targets with LLVM. "
             "Reconfigure CMake with -DCMAKE_C_COMPILER and -DCMAKE_CXX_COMPILER pointing to a clang-based toolchain "
-	    "or build binaries without built-in fuzzing support by setting -DENABLE_FUZZERS instead."
+        "or build binaries without built-in fuzzing support by setting -DENABLE_FUZZERS instead."
         )
     endif()
 endif()
@@ -220,6 +220,12 @@ function(lagom_lib target_name fs_name)
         EXPORT_NAME ${library}
         OUTPUT_NAME lagom-${fs_name}
     )
+
+    if (WIN32)
+        set_target_properties(${target_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lagom)
+        set_target_properties(${target_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lagom)
+    endif()
+
     target_link_libraries(${target_name} PRIVATE ${LAGOM_LIBRARY_LIBS})
     if (NOT ${target_name} STREQUAL "LibCore")
         target_link_libraries(${target_name} PRIVATE LibCore)
@@ -462,19 +468,19 @@ if (BUILD_LAGOM)
     if (ENABLE_UNICODE_DATABASE_DOWNLOAD)
         install(TARGETS LibLocaleData EXPORT LagomTargets)
     endif()
-	
-	if (ENABLE_LAGOM_LIBWEB)
-		add_executable(headless-browser ../../Userland/Utilities/headless-browser.cpp ../../Userland/Services/WebContent/WebDriverConnection.cpp)
-		target_link_libraries(headless-browser LibWeb LibWebSocket LibCrypto LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS)
-	endif()
-	
-	if (ENABLE_LAGOM_LADYBIRD)
-		add_serenity_subdirectory(Ladybird)
-	endif()
-	
+    
+    if (ENABLE_LAGOM_LIBWEB)
+        add_executable(headless-browser ../../Userland/Utilities/headless-browser.cpp ../../Userland/Services/WebContent/WebDriverConnection.cpp)
+        target_link_libraries(headless-browser LibWeb LibWebSocket LibCrypto LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS)
+    endif()
+    
+    if (ENABLE_LAGOM_LADYBIRD)
+        add_serenity_subdirectory(Ladybird)
+    endif()
+    
     if (NOT ENABLE_FUZZERS AND NOT ENABLE_COMPILER_EXPLORER_BUILD AND NOT ANDROID)
         if (NOT WIN32)
-    		add_serenity_subdirectory(Userland/Shell)
+            add_serenity_subdirectory(Userland/Shell)
         endif()
 
         # Lagom Services
@@ -505,41 +511,22 @@ if (BUILD_LAGOM)
         add_executable(js ../../Userland/Utilities/js.cpp)
         target_link_libraries(js LibCrypto LibJS LibLine LibLocale LibMain LibTextCodec Threads::Threads)
         set (LAGOM_TOOL_LIBS
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\liblagom-gui.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\liblagom-webview.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCore\\liblagom-core.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGfx\\liblagom-gfx.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibIPC\\liblagom-ipc.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibJS\\liblagom-js.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibSQL\\liblagom-sql.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWeb\\liblagom-web.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibSyntax\\liblagom-syntax.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWeb\\liblagom-web.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCompress\\liblagom-compress.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCrypto\\liblagom-crypto.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibTextCodec\\liblagom-textcodec.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibRegex\\liblagom-regex.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibLocale\\liblagom-locale.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibUnicode\\liblagom-unicode.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGemini\\liblagom-gemini.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGL\\liblagom\-gl.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibHTTP\\liblagom\-http.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibIDL\\liblagom\-idl.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibMarkdown\\liblagom-markdown.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWasm\\liblagom-wasm.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibXML\\liblagom-xml.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGLSL\\liblagom-glsl.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGPU\\liblagom-gpu.dll"
-        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibTLS\\liblagom-tls.dll"
-            "C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibLine\\liblagom-line.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-textcodec.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-core.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-line.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-js.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-crypto.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-locale.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-regex.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-syntax.dll"
+            "${CMAKE_BINARY_DIR}\\lagom\\liblagom-unicode.dll"
         )
         set (tool js)
         foreach (lib ${LAGOM_TOOL_LIBS})
-        	message(STATUS "Adding ${lib} to ${tool}")
-        	add_custom_command(TARGET ${tool} POST_BUILD
-        	COMMAND ${CMAKE_COMMAND} -E copy
-        		${lib}
-        		$<TARGET_FILE_DIR:${tool}>)
+            add_custom_command(TARGET ${tool} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+                ${lib}
+                $<TARGET_FILE_DIR:${tool}>)
         endforeach()
         if (EMSCRIPTEN)
             add_executable(libjs Wasm/js_repl.cpp)
@@ -583,14 +570,14 @@ if (BUILD_LAGOM)
             target_compile_definitions(test262-runner PRIVATE ASSERT_FAIL_HAS_INT)
         endif()
 
-		
+        
         add_executable(xml ../../Userland/Utilities/xml.cpp)
         target_link_libraries(xml LibCore LibXML LibMain)
-		if (NOT WIN32)
-	        add_executable(wasm ../../Userland/Utilities/wasm.cpp)
-	        target_link_libraries(wasm LibCore LibWasm LibLine LibMain)
+        if (NOT WIN32)
+            add_executable(wasm ../../Userland/Utilities/wasm.cpp)
+            target_link_libraries(wasm LibCore LibWasm LibLine LibMain)
         endif()
-		enable_testing()
+        enable_testing()
         # LibTest
         file(GLOB LIBTEST_SOURCES CONFIGURE_DEPENDS "../../Userland/Libraries/LibTest/*.cpp")
         list(FILTER LIBTEST_SOURCES EXCLUDE REGEX ".*Main.cpp$")
@@ -621,7 +608,7 @@ if (BUILD_LAGOM)
         lagom_test(../../Tests/LibJS/test-invalid-unicode-js.cpp LIBS LibJS)
         lagom_test(../../Tests/LibJS/test-bytecode-js.cpp LIBS LibJS)
         lagom_test(../../Tests/LibJS/test-value-js.cpp LIBS LibJS)
-		if (NOT WIN32)
+        if (NOT WIN32)
 
         # LibTest tests from Tests/
         set(TEST_DIRECTORIES
@@ -702,7 +689,7 @@ if (BUILD_LAGOM)
                 PASS_REGULAR_EXPRESSION "PASS"
             )
         endforeach()
-		endif()
+        endif()
 
 
         # FIXME: When we are using CMake >= 3.21, the library installations can be replaced with RUNTIME_DEPENDENCIES.

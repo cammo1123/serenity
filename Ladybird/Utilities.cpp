@@ -55,17 +55,13 @@ void platform_init()
         setvbuf(stdout, nullptr, _IONBF, 0);
         setvbuf(stderr, nullptr, _IONBF, 0);
     }
-    s_serenity_resource_root = [] {
-        // FIXME: This is a hack to get the resource root on Windows.
-        return "C:/Users/camer/src/serenity/Base";
-    }();
-#else
+#endif
     s_serenity_resource_root = [] {
         auto const* source_dir = getenv("SERENITY_SOURCE_DIR");
         if (source_dir) {
             return DeprecatedString::formatted("{}/Base", source_dir);
         }
-        auto* home = getenv("XDG_CONFIG_HOME") ?: getenv("HOME");
+        auto* home = getenv("XDG_CONFIG_HOME") ?: getenv("HOME") ?: getenv("USERPROFILE");
         VERIFY(home);
         auto home_lagom = DeprecatedString::formatted("{}/.lagom", home);
         if (Core::File::is_directory(home_lagom))
@@ -73,5 +69,4 @@ void platform_init()
         auto app_dir = ak_deprecated_string_from_qstring(QCoreApplication::applicationDirPath());
         return LexicalPath(app_dir).parent().append("share"sv).string();
     }();
-#endif
 }

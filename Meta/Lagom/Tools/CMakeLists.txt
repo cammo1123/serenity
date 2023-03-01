@@ -4,24 +4,20 @@ function(lagom_tool tool)
     # alias for parity with exports
     add_executable(Lagom::${tool} ALIAS ${tool})
     target_link_libraries(${tool} LibCore ${LAGOM_TOOL_LIBS})
-	
-	#copy liblagom-core.dll to the build directory
-	add_custom_command(TARGET ${tool} POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy
-		${CMAKE_SOURCE_DIR}/../../../serenity/Build/lagom/Userland/Libraries/LibCore/liblagom-core.dll
-		$<TARGET_FILE_DIR:${tool}>)	
-	
-	foreach (lib ${LAGOM_TOOL_LIBS})
-		if (lib MATCHES "Lib(.*)" AND lib MATCHES "LibIDL")
-			string(REGEX REPLACE "Lib(.*)" "liblagom-\\1.dll" libname ${lib})
-			string(TOLOWER ${libname} libname)
-			add_custom_command(TARGET ${tool} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy
-				${CMAKE_SOURCE_DIR}/../../../serenity/Build/lagom/Userland/Libraries/${lib}/${libname}
-				$<TARGET_FILE_DIR:${tool}>)
-		endif()
-	endforeach()
-	
+
+	# move all the libs we need into the Lagom_Runtime component
+	set_target_properties(${tool} PROPERTIES
+		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lagom
+		RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lagom
+		RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lagom
+		RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO ${CMAKE_BINARY_DIR}/lagom
+		RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL ${CMAKE_BINARY_DIR}/lagom
+		RUNTIME_OUTPUT_NAME ${tool}
+		RUNTIME_OUTPUT_NAME_DEBUG ${tool}
+		RUNTIME_OUTPUT_NAME_RELEASE ${tool}
+		RUNTIME_OUTPUT_NAME_RELWITHDEBINFO ${tool}
+		RUNTIME_OUTPUT_NAME_MINSIZEREL ${tool}
+	)
 	
     install(
         TARGETS ${tool}
