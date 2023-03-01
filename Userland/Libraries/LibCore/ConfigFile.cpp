@@ -42,6 +42,7 @@ ErrorOr<NonnullRefPtr<ConfigFile>> ConfigFile::open_for_system(DeprecatedString 
 
 ErrorOr<NonnullRefPtr<ConfigFile>> ConfigFile::open(DeprecatedString const& filename, AllowWriting allow_altering)
 {
+    dbgln("ConfigFile: Loading {}", filename);
     auto maybe_file = Stream::File::open(filename, allow_altering == AllowWriting::Yes ? Stream::OpenMode::ReadWrite : Stream::OpenMode::Read);
     OwnPtr<Stream::BufferedFile> buffered_file;
     if (maybe_file.is_error()) {

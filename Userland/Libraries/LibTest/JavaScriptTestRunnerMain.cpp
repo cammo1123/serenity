@@ -37,9 +37,9 @@ using namespace Test::JS;
 
 static StringView g_program_name { "test-js"sv };
 
+#if !defined(AK_OS_WINDOWS)
 static void handle_sigabrt(int)
 {
-#if !defined(AK_OS_WINDOWS)
     dbgln("{}: SIGABRT received, cleaning up.", g_program_name);
     Test::cleanup();
     struct sigaction act;
@@ -52,11 +52,10 @@ static void handle_sigabrt(int)
         exit(1);
     }
     abort();
-#else
     dbgln("{}: SIGABRT received, but we can't clean up on Windows.", g_program_name);
     VERIFY_NOT_REACHED();
-#endif
 }
+#endif
 
 int main(int argc, char** argv)
 {
@@ -65,6 +64,7 @@ int main(int argc, char** argv)
     auto program_name = LexicalPath::basename(argv[0]);
     g_program_name = program_name;
 
+#if !defined(AK_OS_WINDOWS)
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_flags = SA_NOCLDWAIT;
@@ -74,6 +74,7 @@ int main(int argc, char** argv)
         perror("sigaction");
         return 1;
     }
+#endif
 
 #ifdef SIGINFO
     signal(SIGINFO, [](int) {
@@ -147,6 +148,14 @@ int main(int argc, char** argv)
     } else {
 #ifdef AK_OS_SERENITY
         test_root = LexicalPath::join("/home/anon/Tests"sv, DeprecatedString::formatted("{}-tests", program_name.split_view('-').last())).string();
+#elif defined(AK_OS_WINDOWS)
+        char* serenity_source_dir = getenv("SERENITY_SOURCE_DIR");
+        if (!serenity_source_dir) {
+            warnln("No test root given, {} requires the SERENITY_SOURCE_DIR environment variable to be set", g_program_name);
+            return 1;
+        }
+        test_root = DeprecatedString::formatted("{}/{}", serenity_source_dir, g_test_root_fragment);
+        common_path = DeprecatedString::formatted("{}/Userland/Libraries/LibJS/Tests/test-common.js", serenity_source_dir);
 #else
         char* serenity_source_dir = getenv("SERENITY_SOURCE_DIR");
         if (!serenity_source_dir) {

@@ -12,7 +12,9 @@
 #include <LibDNS/Answer.h>
 #include <LibDNS/Name.h>
 #include <LibDNS/Packet.h>
+#if !defined(AK_OS_WINDOWS)
 #include <netinet/in.h>
+#endif
 
 namespace LookupServer {
 

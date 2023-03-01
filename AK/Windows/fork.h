@@ -14,7 +14,7 @@
  * from the use of this software.
  */
 
-#include <windows.h>
+#include <AK/Windows.h>
 #include <winnt.h>
 #include <winternl.h>
 #include <stdio.h>

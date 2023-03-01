@@ -24,14 +24,16 @@ inline double get_time_in_ms()
 template<typename Callback>
 inline void iterate_directory_recursively(DeprecatedString const& directory_path, Callback callback)
 {
-#if !defined(AK_OS_WINDOWS)
     Core::DirIterator directory_iterator(directory_path, Core::DirIterator::Flags::SkipDots);
 
     while (directory_iterator.has_next()) {
         auto name = directory_iterator.next_path();
         struct stat st = {};
+#if !defined(AK_OS_WINDOWS)
         if (fstatat(directory_iterator.fd(), name.characters(), &st, AT_SYMLINK_NOFOLLOW) < 0)
             continue;
+#else
+#endif
         bool is_directory = S_ISDIR(st.st_mode);
         auto full_path = DeprecatedString::formatted("{}/{}", directory_path, name);
         if (is_directory && name != "/Fixtures"sv) {
@@ -40,12 +42,6 @@ inline void iterate_directory_recursively(DeprecatedString const& directory_path
             callback(full_path);
         }
     }
-	#else
-	(void)directory_path;
-	(void)callback;
-	dbgln("iterate_directory_recursively not implemented on Windows");
-	VERIFY_NOT_REACHED();
-#endif
 }
 
 }

@@ -18,8 +18,7 @@
 #    include <LibCore/System.h>
 #endif
 #if defined(AK_OS_WINDOWS)
-#    include <Windows.h>
-#    include <winsock2.h>
+#    include <AK/Windows.h>
 #endif
 
 namespace SQL {

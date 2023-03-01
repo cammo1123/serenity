@@ -17,5 +17,11 @@
 #    if defined(interface)
 #        undef interface
 #    endif
+#  if defined(BI_BITFIELDS)
+#    undef BI_BITFIELDS
+#  endif
+#if defined(BI_RGB)
+#    undef BI_RGB
+#  endif
 #    define sched_yield(a)
 #endif

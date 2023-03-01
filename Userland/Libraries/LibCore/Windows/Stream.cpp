@@ -5,16 +5,21 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Format.h"
 #include <LibCore/Stream.h>
 #include <LibCore/System.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <winsock2.h>
 #ifdef AK_OS_SERENITY
 #    include <serenity.h>
 #endif
 #ifdef AK_OS_FREEBSD
 #    include <sys/ucred.h>
+#endif
+#ifdef AK_OS_WINDOWS
+#    include <AK/Windows.h>
 #endif
 
 namespace Core::Stream {
@@ -26,10 +31,20 @@ ErrorOr<NonnullOwnPtr<File>> File::open(StringView filename, OpenMode mode, mode
     return file;
 }
 
-ErrorOr<NonnullOwnPtr<File>> File::adopt_fd(int, OpenMode, ShouldCloseFileDescriptor)
+ErrorOr<NonnullOwnPtr<File>> File::adopt_fd(int fd, OpenMode mode, ShouldCloseFileDescriptor should_close_file_descriptor)
 {
-    dbgln("File: adopt_fd not implemented");
-    VERIFY_NOT_REACHED();
+    if (fd < 0) {
+        return Error::from_errno(EBADF);
+    }
+
+    if (!has_any_flag(mode, OpenMode::ReadWrite)) {
+        dbgln("Core::File::adopt_fd: Attempting to adopt a file with neither Read nor Write specified in mode");
+        return Error::from_errno(EINVAL);
+    }
+
+    auto file = TRY(adopt_nonnull_own_or_enomem(new (nothrow) File(mode, should_close_file_descriptor)));
+    file->m_fd = fd;
+    return file;
 }
 
 ErrorOr<NonnullOwnPtr<File>> File::standard_input()
@@ -116,7 +131,6 @@ ErrorOr<ByteBuffer> File::read_until_eof(size_t block_size)
 
 ErrorOr<size_t> File::write(ReadonlyBytes buffer)
 {
-
     if (!has_flag(m_mode, OpenMode::Write)) {
         // NOTE: Same deal as Read.
         return Error::from_errno(EBADF);
@@ -234,16 +248,31 @@ ErrorOr<void> Socket::connect_inet(int, SocketAddress const&)
     VERIFY_NOT_REACHED();
 }
 
-ErrorOr<Bytes> PosixSocketHelper::read(Bytes, int)
+ErrorOr<Bytes> PosixSocketHelper::read(Bytes buffer, int flags)
 {
-    dbgln("PosixSocketHelper: read not implemented");
-    VERIFY_NOT_REACHED();
+    if (!is_open()) {
+        return Error::from_errno(ENOTCONN);
+    }
+
+    ssize_t nread = TRY(System::recv(m_fd, buffer.data(), buffer.size(), flags));
+    m_last_read_was_eof = nread == 0;
+
+    // If a socket read is EOF, then no more data can be read from it because
+    // the protocol has disconnected. In this case, we can just disable the
+    // notifier if we have one.
+    if (m_last_read_was_eof && m_notifier)
+        m_notifier->set_enabled(false);
+
+    return buffer.trim(nread);
 }
 
-ErrorOr<size_t> PosixSocketHelper::write(ReadonlyBytes, int)
+ErrorOr<size_t> PosixSocketHelper::write(ReadonlyBytes buffer, int flags)
 {
-    dbgln("PosixSocketHelper: write not implemented");
-    VERIFY_NOT_REACHED();
+    if (!is_open()) {
+        return Error::from_errno(ENOTCONN);
+    }
+
+    return TRY(System::send(m_fd, buffer.data(), buffer.size(), flags));
 }
 
 void PosixSocketHelper::close()
@@ -290,8 +319,8 @@ ErrorOr<void> PosixSocketHelper::set_receive_timeout(Time)
 
 void PosixSocketHelper::setup_notifier()
 {
-    dbgln("PosixSocketHelper: setup_notifier not implemented");
-    VERIFY_NOT_REACHED();
+    if (!m_notifier)
+        m_notifier = Core::Notifier::construct(m_fd, Core::Notifier::Read);
 }
 
 ErrorOr<NonnullOwnPtr<TCPSocket>> TCPSocket::connect(DeprecatedString const&, u16)
@@ -343,22 +372,27 @@ ErrorOr<NonnullOwnPtr<LocalSocket>> LocalSocket::connect(DeprecatedString const&
     return socket;
 }
 
-ErrorOr<NonnullOwnPtr<LocalSocket>> LocalSocket::adopt_fd(int, PreventSIGPIPE)
+ErrorOr<NonnullOwnPtr<LocalSocket>> LocalSocket::adopt_fd(int fd, PreventSIGPIPE prevent_sigpipe)
 {
-    dbgln("LocalSocket: adopt_fd not implemented");
-    VERIFY_NOT_REACHED();
+    if (fd < 0) {
+        return Error::from_errno(EBADF);
+    }
+
+    auto socket = TRY(adopt_nonnull_own_or_enomem(new (nothrow) LocalSocket(prevent_sigpipe)));
+    socket->m_helper.set_fd(fd);
+    socket->setup_notifier();
+    return socket;
 }
 
-ErrorOr<int> LocalSocket::receive_fd(int)
+ErrorOr<int> LocalSocket::receive_fd(int flags)
 {
-    dbgln("LocalSocket: receive_fd not implemented");
+    dbgln("LocalSocket::receive_fd(flags: {}) not implemented", flags);
     VERIFY_NOT_REACHED();
 }
-
-ErrorOr<void> LocalSocket::send_fd(int)
+ErrorOr<void> LocalSocket::send_fd(int fd)
 {
-    dbgln("LocalSocket: send_fd not implemented");
-    VERIFY_NOT_REACHED();
+    dbgln("LocalSocket::send_fd(fd: {}) not implemented", fd);
+    return{};
 }
 
 ErrorOr<pid_t> LocalSocket::peer_pid() const
@@ -375,13 +409,19 @@ ErrorOr<Bytes> LocalSocket::read_without_waiting(Bytes)
 
 Optional<int> LocalSocket::fd() const
 {
-    dbgln("LocalSocket: fd not implemented");
-    VERIFY_NOT_REACHED();
+    if (!is_open())
+        return {};
+    return m_helper.fd();
 }
 
 ErrorOr<int> LocalSocket::release_fd()
 {
-    dbgln("LocalSocket: release_fd not implemented");
-    VERIFY_NOT_REACHED();
+    if (!is_open()) {
+        return Error::from_errno(ENOTCONN);
+    }
+
+    auto fd = m_helper.fd();
+    m_helper.set_fd(-1);
+    return fd;
 }
 }

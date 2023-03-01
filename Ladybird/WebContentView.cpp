@@ -5,13 +5,14 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <handleapi.h>
 #define AK_DONT_REPLACE_STD
 
-#include "WebContentView.h"
 #include "ConsoleWidget.h"
 #include "HelperProcess.h"
 #include "InspectorWidget.h"
 #include "Utilities.h"
+#include "WebContentView.h"
 #include <AK/Assertions.h>
 #include <AK/ByteBuffer.h>
 #include <AK/Format.h>
@@ -562,6 +563,122 @@ void WebContentView::create_client()
 {
     m_client_state = {};
 
+#ifdef AK_OS_WINDOWS
+    HANDLE pipe_handles[2] {};
+    SECURITY_ATTRIBUTES saAttr;
+    saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+    saAttr.bInheritHandle = TRUE;
+    saAttr.lpSecurityDescriptor = nullptr;
+    if (CreatePipe(&pipe_handles[0], &pipe_handles[1], &saAttr, 0) == 0) {
+        perror("CreatePipe");
+        VERIFY_NOT_REACHED();
+    }
+    if (SetHandleInformation(pipe_handles[0], HANDLE_FLAG_INHERIT, 0) == 0) {
+        perror("SetHandleInformation");
+        VERIFY_NOT_REACHED();
+    }
+
+    HANDLE ui_handle = pipe_handles[1];
+    HANDLE wc_handle = pipe_handles[0];
+
+    HANDLE fd_passing_pipe_handles[2] {};
+    if (CreatePipe(&fd_passing_pipe_handles[0], &fd_passing_pipe_handles[1], &saAttr, 0) == 0) {
+        perror("CreatePipe");
+        VERIFY_NOT_REACHED();
+    }
+    if (SetHandleInformation(fd_passing_pipe_handles[0], HANDLE_FLAG_INHERIT, 0) == 0) {
+        perror("SetHandleInformation");
+        VERIFY_NOT_REACHED();
+    }
+    HANDLE ui_fd_passing_handle = fd_passing_pipe_handles[1];
+    HANDLE wc_fd_passing_handle = fd_passing_pipe_handles[0];
+
+    auto takeover_string = DeprecatedString::formatted("WebContent:{}", wc_handle);
+    MUST(Core::System::setenv("SOCKET_TAKEOVER"sv, takeover_string, true));
+
+    auto webcontent_fd_passing_socket_string = DeprecatedString::formatted("{}", wc_fd_passing_handle);
+
+    Vector<StringView, 5> arguments {
+        "WebContent"sv,
+        "--webcontent-fd-passing-socket"sv,
+        webcontent_fd_passing_socket_string
+    };
+
+    if (!m_webdriver_content_ipc_path.is_empty()) {
+        arguments.append("--webdriver-content-path"sv);
+        arguments.append(m_webdriver_content_ipc_path);
+    }
+
+    StringBuilder builder;
+    builder.join(' ', arguments);
+
+    PROCESS_INFORMATION piProcInfo;
+    ZeroMemory(&piProcInfo, sizeof(PROCESS_INFORMATION));
+
+    STARTUPINFO siStartInfo;
+    ZeroMemory(&siStartInfo, sizeof(STARTUPINFO));
+    siStartInfo.cb = sizeof(STARTUPINFO);
+    siStartInfo.dwFlags |= STARTF_USESTDHANDLES;
+
+    TCHAR szCmdline[] = TEXT("C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Ladybird\\WebContent\\WebContent.exe");
+    auto res = CreateProcess(NULL,
+        szCmdline,
+        nullptr,
+        nullptr,
+        TRUE,
+        0,
+        nullptr,
+        nullptr,
+        &siStartInfo,
+        &piProcInfo);
+
+    if (!res) {
+        dbgln("Failed to create WebContent process: {}", GetLastError());
+        VERIFY_NOT_REACHED();
+    }
+    
+    dbgln("Created WebContent process: {}", piProcInfo.dwProcessId);
+    dbgln("WebContent UI socket: {}", ui_handle);
+    dbgln("WebContent UI fd passing socket: {}", ui_fd_passing_handle);
+
+    auto pipe = MUST(Core::Stream::LocalSocket::adopt_fd(_open_osfhandle((intptr_t)ui_handle, _O_BINARY)));
+
+    auto new_client = MUST(adopt_nonnull_ref_or_enomem(new (nothrow) WebView::WebContentClient(std::move(pipe), *this)));
+    new_client->set_fd_passing_socket(MUST(Core::Stream::LocalSocket::adopt_fd(_open_osfhandle((intptr_t)ui_fd_passing_handle, _O_BINARY))));
+
+    dbgln("WebContent UI fd passing handle: {}", ui_fd_passing_handle);
+
+    BOOL r = WriteFile(ui_handle, "Hello", 5, nullptr, nullptr);
+    if (!r) {
+        dbgln("Failed to write to WebContent UI fd passing socket: {}", GetLastError());
+        VERIFY_NOT_REACHED();
+    }
+
+    m_web_content_notifier.setSocket(new_client->socket().fd().value());
+    m_web_content_notifier.setEnabled(true);
+
+    QObject::connect(&m_web_content_notifier, &QSocketNotifier::activated, [new_client = new_client.ptr()] {
+        if (auto notifier = new_client->socket().notifier())
+            notifier->on_ready_to_read();
+    });
+
+    struct DeferredInvokerQt final : IPC::DeferredInvoker {
+        virtual ~DeferredInvokerQt() = default;
+        virtual void schedule(Function<void()> callback) override
+        {
+            QTimer::singleShot(0, std::move(callback));
+        }
+    };
+
+    new_client->set_deferred_invoker(make<DeferredInvokerQt>());
+
+    m_client_state.client = new_client;
+    m_client_state.client->on_web_content_process_crash = [this] {
+        QTimer::singleShot(0, [this] {
+            handle_web_content_process_crash();
+        });
+    };
+#else
     int socket_fds[2] {};
     MUST(Core::System::socketpair(AF_LOCAL, SOCK_STREAM, 0, socket_fds));
 
@@ -634,6 +751,7 @@ void WebContentView::create_client()
             handle_web_content_process_crash();
         });
     };
+#endif
 
     client().async_set_device_pixels_per_css_pixel(m_device_pixel_ratio);
     client().async_update_system_theme(MUST(Gfx::load_system_theme(DeprecatedString::formatted("{}/res/themes/Default.ini", s_serenity_resource_root))));

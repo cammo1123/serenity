@@ -13,6 +13,10 @@
 #include <LibCore/StandardPaths.h>
 #include <QCoreApplication>
 
+#ifdef AK_OS_WINDOWS
+#    include <windows.h>
+#endif
+
 DeprecatedString s_serenity_resource_root;
 
 AK::DeprecatedString ak_deprecated_string_from_qstring(QString const& qstring)
@@ -35,18 +39,34 @@ void platform_init()
 #ifdef AK_OS_ANDROID
     extern void android_platform_init();
     android_platform_init();
+#elif defined(AK_OS_WINDOWS)
+    if (GetConsoleWindow() == nullptr) {
+        if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+            freopen("CONOUT$", "w", stdout);
+            freopen("CONOUT$", "w", stderr);
+        }
+    } else {
+        // we're running in a console, so we can use the console
+        // for debugging purposes
+        freopen("CONOUT$", "w", stdout);
+        freopen("CONOUT$", "w", stderr);
+
+        // The output is buffered by default, so we need to flush it manually
+        setvbuf(stdout, nullptr, _IONBF, 0);
+        setvbuf(stderr, nullptr, _IONBF, 0);
+    }
+    s_serenity_resource_root = [] {
+        // FIXME: This is a hack to get the resource root on Windows.
+        return "C:/Users/camer/src/serenity/Base";
+    }();
 #else
     s_serenity_resource_root = [] {
         auto const* source_dir = getenv("SERENITY_SOURCE_DIR");
         if (source_dir) {
             return DeprecatedString::formatted("{}/Base", source_dir);
         }
-#    if !defined(AK_OS_WINDOWS)
         auto* home = getenv("XDG_CONFIG_HOME") ?: getenv("HOME");
         VERIFY(home);
-#    else
-        auto home = Core::StandardPaths::home_directory();
-#    endif
         auto home_lagom = DeprecatedString::formatted("{}/.lagom", home);
         if (Core::File::is_directory(home_lagom))
             return home_lagom;

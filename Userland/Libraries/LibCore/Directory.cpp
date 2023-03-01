@@ -91,9 +91,9 @@ ErrorOr<bool> Directory::is_valid_directory(HANDLE handle)
 {
     // Stat the file to see if it's a directory.
     FILE_BASIC_INFO basic_info;
-	if (GetFileInformationByHandleEx(handle, FileBasicInfo, &basic_info, sizeof(basic_info)) == 0)
-		return Error::from_errno(ENOTDIR);
-	return basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+    if (GetFileInformationByHandleEx(handle, FileBasicInfo, &basic_info, sizeof(basic_info)) == 0)
+        return Error::from_errno(ENOTDIR);
+    return basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY;
 }
 
 ErrorOr<Directory> Directory::adopt_handle(HANDLE handle, Optional<LexicalPath> path)
@@ -137,8 +137,19 @@ ErrorOr<void> Directory::ensure_directory(LexicalPath const& path, mode_t creati
     if (return_value.is_error() && return_value.error().code() != EEXIST)
         return return_value;
 #else
+    // auto dir_exists = [](LexicalPath const& path) {
+    //     DWORD file_attributes = GetFileAttributesA(path.string().characters());
+    //     if (file_attributes == INVALID_FILE_ATTRIBUTES)
+    //         return false;
+
+    //     if ((file_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0u)
+    //         return true; 
+
+    //     return false;
+    // };
+
     auto return_value = mkdir(path.string().characters());
-    if (return_value != 0) {
+    if (return_value != 0 && errno != EEXIST) {
         dbgln("Directory::ensure_directory() mkdir() failed");
         return Error::from_errno(EROFS);
     }

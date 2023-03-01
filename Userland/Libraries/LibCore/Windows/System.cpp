@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Format.h"
 #include <AK/DeprecatedString.h>
 #include <AK/FixedArray.h>
 #include <AK/ScopedValueRollback.h>
@@ -16,7 +17,9 @@
 #include <LibCore/File.h>
 #include <LibCore/SessionManagement.h>
 #include <LibCore/System.h>
+#include <fileapi.h>
 #include <limits.h>
+#include <processenv.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -109,7 +112,7 @@ ErrorOr<int> openat(int fd, StringView path, int options, mode_t mode)
 ErrorOr<void> close(int fd)
 {
     _close(fd);
-    CloseHandle((HANDLE)_get_osfhandle(fd));
+    // CloseHandle((HANDLE)_get_osfhandle(fd));
     return {};
 }
 ErrorOr<void> ftruncate(int fd, off_t length);
@@ -173,13 +176,13 @@ ErrorOr<Optional<struct group>> getgrgid(gid_t);
 ErrorOr<void> clock_settime(clockid_t clock_id, struct timespec* ts);
 ErrorOr<pid_t> posix_spawn(StringView path, posix_spawn_file_actions_t const* file_actions, posix_spawnattr_t const* attr, char* const arguments[], char* const envp[])
 {
-	(void)path;
-	(void)file_actions;
-	(void)attr;
-	(void)arguments;
-	(void)envp;
-	dbgln("FIXME: Implement posix_spawn()");
-	VERIFY_NOT_REACHED();
+    (void)path;
+    (void)file_actions;
+    (void)attr;
+    (void)arguments;
+    (void)envp;
+    dbgln("FIXME: Implement posix_spawn()");
+    VERIFY_NOT_REACHED();
 }
 ErrorOr<pid_t> posix_spawnp(StringView path, posix_spawn_file_actions_t* const file_actions, posix_spawnattr_t* const attr, char* const arguments[], char* const envp[]);
 ErrorOr<off_t> lseek(int fd, off_t offset, int whence)
@@ -242,13 +245,116 @@ ErrorOr<void> adjtime(const struct timeval* delta, struct timeval* old_delta)
     dbgln("FIXME: Implement adjtime");
     VERIFY_NOT_REACHED();
 }
-ErrorOr<void> exec(StringView filename, ReadonlySpan<StringView> arguments, SearchInPath, Optional<ReadonlySpan<StringView>> environment)
+ErrorOr<void> exec(StringView filename, ReadonlySpan<StringView> arguments, SearchInPath search_in_path, Optional<ReadonlySpan<StringView>> environment)
 {
-    (void)filename;
-    (void)arguments;
-    (void)environment;
-    dbgln("FIXME: Implement exec()");
+#ifdef AK_OS_SERENITY
+    Syscall::SC_execve_params params;
+
+    auto argument_strings = TRY(FixedArray<Syscall::StringArgument>::create(arguments.size()));
+    for (size_t i = 0; i < arguments.size(); ++i) {
+        argument_strings[i] = { arguments[i].characters_without_null_termination(), arguments[i].length() };
+    }
+    params.arguments.strings = argument_strings.data();
+    params.arguments.length = argument_strings.size();
+
+    size_t env_count = 0;
+    if (environment.has_value()) {
+        env_count = environment->size();
+    } else {
+        for (size_t i = 0; environ[i]; ++i)
+            ++env_count;
+    }
+
+    auto environment_strings = TRY(FixedArray<Syscall::StringArgument>::create(env_count));
+    if (environment.has_value()) {
+        for (size_t i = 0; i < env_count; ++i) {
+            environment_strings[i] = { environment->at(i).characters_without_null_termination(), environment->at(i).length() };
+        }
+    } else {
+        for (size_t i = 0; i < env_count; ++i) {
+            environment_strings[i] = { environ[i], strlen(environ[i]) };
+        }
+    }
+    params.environment.strings = environment_strings.data();
+    params.environment.length = environment_strings.size();
+
+    auto run_exec = [](Syscall::SC_execve_params& params) -> ErrorOr<void> {
+        int rc = syscall(Syscall::SC_execve, &params);
+        if (rc < 0)
+            return Error::from_syscall("exec"sv, rc);
+        return {};
+    };
+
+    DeprecatedString exec_filename;
+
+    if (search_in_path == SearchInPath::Yes) {
+        auto maybe_executable = Core::File::resolve_executable_from_environment(filename);
+
+        if (!maybe_executable.has_value())
+            return ENOENT;
+
+        exec_filename = maybe_executable.release_value();
+    } else {
+        exec_filename = filename.to_deprecated_string();
+    }
+
+    params.path = { exec_filename.characters(), exec_filename.length() };
+    TRY(run_exec(params));
     VERIFY_NOT_REACHED();
+#else
+    DeprecatedString filename_string { filename };
+
+    auto argument_strings = TRY(FixedArray<DeprecatedString>::create(arguments.size()));
+    auto argv = TRY(FixedArray<char*>::create(arguments.size() + 1));
+    for (size_t i = 0; i < arguments.size(); ++i) {
+        argument_strings[i] = arguments[i].to_deprecated_string();
+        dbgln("argv[{}]: {}", i, argument_strings[i]);
+        argv[i] = const_cast<char*>(argument_strings[i].characters());
+    }
+    argv[arguments.size()] = nullptr;
+
+    int rc = 0;
+    if (environment.has_value()) {
+        auto environment_strings = TRY(FixedArray<DeprecatedString>::create(environment->size()));
+        auto envp = TRY(FixedArray<char*>::create(environment->size() + 1));
+        for (size_t i = 0; i < environment->size(); ++i) {
+            environment_strings[i] = environment->at(i).to_deprecated_string();
+            envp[i] = const_cast<char*>(environment_strings[i].characters());
+        }
+        envp[environment->size()] = nullptr;
+
+        if (search_in_path == SearchInPath::Yes && !filename.contains('/')) {
+#    if defined(AK_OS_MACOS) || defined(AK_OS_FREEBSD)
+            // These BSDs don't support execvpe(), so we'll have to manually search the PATH.
+            ScopedValueRollback errno_rollback(errno);
+
+            auto maybe_executable = Core::File::resolve_executable_from_environment(filename_string);
+
+            if (!maybe_executable.has_value()) {
+                errno_rollback.set_override_rollback_value(ENOENT);
+                return Error::from_errno(ENOENT);
+            }
+
+            rc = ::execve(maybe_executable.release_value().characters(), argv.data(), envp.data());
+#    else
+            rc = ::_execvpe(filename_string.characters(), argv.data(), envp.data());
+#    endif
+        } else {
+            rc = ::execve(filename_string.characters(), argv.data(), envp.data());
+        }
+
+    } else {
+        if (search_in_path == SearchInPath::Yes) {
+            rc = ::execvp(filename_string.characters(), argv.data());
+        } else {
+            rc = ::execv(filename_string.characters(), argv.data());
+        }
+    }
+
+    if (rc < 0)
+        return Error::from_syscall("exec"sv, rc);
+    VERIFY_NOT_REACHED();
+#endif
 }
 ErrorOr<int> socket(int domain, int type, int protocol)
 {
@@ -278,10 +384,28 @@ ErrorOr<int> accept(int sockfd, struct sockaddr* address, socklen_t* address_len
 }
 ErrorOr<void> connect(int sockfd, struct sockaddr const*, socklen_t);
 ErrorOr<void> shutdown(int sockfd, int how);
-ErrorOr<ssize_t> send(int sockfd, void const*, size_t, int flags);
+ErrorOr<ssize_t> send(int sockfd, void const* buffer, size_t buffer_length, int flags)
+{
+    char const* buffer_ptr = (char const*)buffer;
+    int buffer_length_int = (int)buffer_length;
+
+    dbgln("send: sockfd={}, buffer={}, buffer_length={}, flags={}", sockfd, buffer_ptr, buffer_length_int, flags);
+
+    auto sent = ::send(sockfd, buffer_ptr, buffer_length_int, flags);
+    if (sent < 0)
+        return Error::from_syscall("send"sv, -errno);
+
+    return sent;
+}
 ErrorOr<ssize_t> sendmsg(int sockfd, const struct msghdr*, int flags);
 ErrorOr<ssize_t> sendto(int sockfd, void const*, size_t, int flags, struct sockaddr const*, socklen_t);
-ErrorOr<ssize_t> recv(int sockfd, void*, size_t, int flags);
+ErrorOr<ssize_t> recv(int sockfd, void* buffer, size_t length, int flags)
+{
+    auto received = ::recv(sockfd, (char*)buffer, (int)length, flags);
+    if (received < 0)
+        return Error::from_syscall("recv"sv, -errno);
+    return received;
+}
 ErrorOr<ssize_t> recvmsg(int sockfd, struct msghdr*, int flags);
 ErrorOr<ssize_t> recvfrom(int sockfd, void*, size_t, int flags, struct sockaddr*, socklen_t*);
 ErrorOr<void> getsockopt(int sockfd, int level, int option, void* value, socklen_t* value_size)
@@ -298,12 +422,30 @@ ErrorOr<void> setsockopt(int sockfd, int level, int option, void const* value, s
 }
 ErrorOr<void> getsockname(int sockfd, struct sockaddr*, socklen_t*);
 ErrorOr<void> getpeername(int sockfd, struct sockaddr*, socklen_t*);
-ErrorOr<void> socketpair(int domain, int type, int protocol, int sv[2])
+ErrorOr<void> socketpair(int domain, int type, int protocol, int sv[2]);
 ErrorOr<Vector<gid_t>> getgroups();
 ErrorOr<void> setgroups(ReadonlySpan<gid_t>);
 ErrorOr<void> mknod(StringView pathname, mode_t mode, dev_t dev);
 ErrorOr<void> mkfifo(StringView pathname, mode_t mode);
-ErrorOr<void> setenv(StringView, StringView, bool);
+ErrorOr<void> setenv(StringView name, StringView value, bool overwrite)
+{
+    auto builder = TRY(StringBuilder::create());
+    TRY(builder.try_append(name));
+    TRY(builder.try_append('\0'));
+    TRY(builder.try_append(value));
+    TRY(builder.try_append('\0'));
+    // Note the explicit null terminators above.
+    auto c_name = builder.string_view().characters_without_null_termination();
+    auto c_value = c_name + name.length() + 1;
+
+    if (!overwrite && GetEnvironmentVariableA(c_name, nullptr, 0) > 0) {
+        printf("setenv: %s already exists\n", c_name);
+        return {};
+    }
+    SetEnvironmentVariable(c_name, c_value);
+
+    return {};
+}
 ErrorOr<void> putenv(StringView);
 ErrorOr<int> posix_openpt(int flags);
 ErrorOr<void> grantpt(int fildes);

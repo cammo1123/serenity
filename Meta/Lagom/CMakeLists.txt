@@ -472,8 +472,10 @@ if (BUILD_LAGOM)
 		add_serenity_subdirectory(Ladybird)
 	endif()
 	
-    if (NOT ENABLE_FUZZERS AND NOT ENABLE_COMPILER_EXPLORER_BUILD AND NOT ANDROID AND NOT WIN32)
-		add_serenity_subdirectory(Userland/Shell)
+    if (NOT ENABLE_FUZZERS AND NOT ENABLE_COMPILER_EXPLORER_BUILD AND NOT ANDROID)
+        if (NOT WIN32)
+    		add_serenity_subdirectory(Userland/Shell)
+        endif()
 
         # Lagom Services
         add_serenity_subdirectory(Userland/Services)
@@ -502,6 +504,43 @@ if (BUILD_LAGOM)
 
         add_executable(js ../../Userland/Utilities/js.cpp)
         target_link_libraries(js LibCrypto LibJS LibLine LibLocale LibMain LibTextCodec Threads::Threads)
+        set (LAGOM_TOOL_LIBS
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\liblagom-gui.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\liblagom-webview.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCore\\liblagom-core.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGfx\\liblagom-gfx.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibIPC\\liblagom-ipc.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibJS\\liblagom-js.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibSQL\\liblagom-sql.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWeb\\liblagom-web.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibSyntax\\liblagom-syntax.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWeb\\liblagom-web.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCompress\\liblagom-compress.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibCrypto\\liblagom-crypto.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibTextCodec\\liblagom-textcodec.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibRegex\\liblagom-regex.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibLocale\\liblagom-locale.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibUnicode\\liblagom-unicode.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGemini\\liblagom-gemini.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGL\\liblagom\-gl.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibHTTP\\liblagom\-http.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibIDL\\liblagom\-idl.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibMarkdown\\liblagom-markdown.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibWasm\\liblagom-wasm.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibXML\\liblagom-xml.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGLSL\\liblagom-glsl.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibGPU\\liblagom-gpu.dll"
+        	"C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibTLS\\liblagom-tls.dll"
+            "C:\\Users\\camer\\src\\serenity\\Build\\lagom\\Userland\\Libraries\\LibLine\\liblagom-line.dll"
+        )
+        set (tool js)
+        foreach (lib ${LAGOM_TOOL_LIBS})
+        	message(STATUS "Adding ${lib} to ${tool}")
+        	add_custom_command(TARGET ${tool} POST_BUILD
+        	COMMAND ${CMAKE_COMMAND} -E copy
+        		${lib}
+        		$<TARGET_FILE_DIR:${tool}>)
+        endforeach()
         if (EMSCRIPTEN)
             add_executable(libjs Wasm/js_repl.cpp)
             target_link_libraries(libjs LibJS LibLocale LibTimeZone LibUnicode)
@@ -518,13 +557,15 @@ if (BUILD_LAGOM)
         if (NOT EMSCRIPTEN AND NOT WIN32)
             add_executable(ntpquery ../../Userland/Utilities/ntpquery.cpp)
             target_link_libraries(ntpquery LibCore LibMain)
+
+            add_executable(sql ../../Userland/Utilities/sql.cpp)
+            target_link_libraries(sql LibCore LibIPC LibLine LibMain LibSQL)
+            
+            add_executable(test262-runner ../../Tests/LibJS/test262-runner.cpp)
+            target_link_libraries(test262-runner LibJS LibCore)
         endif()
 
-        add_executable(sql ../../Userland/Utilities/sql.cpp)
-        target_link_libraries(sql LibCore LibIPC LibLine LibMain LibSQL)
 
-        add_executable(test262-runner ../../Tests/LibJS/test262-runner.cpp)
-        target_link_libraries(test262-runner LibJS LibCore)
 
         if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
             include(CheckCSourceCompiles)
@@ -548,7 +589,7 @@ if (BUILD_LAGOM)
 		if (NOT WIN32)
 	        add_executable(wasm ../../Userland/Utilities/wasm.cpp)
 	        target_link_libraries(wasm LibCore LibWasm LibLine LibMain)
-		endif()
+        endif()
 		enable_testing()
         # LibTest
         file(GLOB LIBTEST_SOURCES CONFIGURE_DEPENDS "../../Userland/Libraries/LibTest/*.cpp")
@@ -564,6 +605,23 @@ if (BUILD_LAGOM)
             OBJECT
             "${SERENITY_PROJECT_ROOT}/Userland/Libraries/LibTest/TestMain.cpp"
         )
+                # JavaScriptTestRunner + LibTest tests
+        # test-js
+        add_executable(test-js
+            ../../Tests/LibJS/test-js.cpp
+            ../../Userland/Libraries/LibTest/JavaScriptTestRunnerMain.cpp)
+        target_link_libraries(test-js LibCore LibTest LibJS)
+        add_test(
+            NAME JS
+            COMMAND test-js --show-progress=false
+        )
+        set_tests_properties(JS PROPERTIES ENVIRONMENT SERENITY_SOURCE_DIR=${SERENITY_PROJECT_ROOT})
+
+        # Extra tests from Tests/LibJS
+        lagom_test(../../Tests/LibJS/test-invalid-unicode-js.cpp LIBS LibJS)
+        lagom_test(../../Tests/LibJS/test-bytecode-js.cpp LIBS LibJS)
+        lagom_test(../../Tests/LibJS/test-value-js.cpp LIBS LibJS)
+		if (NOT WIN32)
 
         # LibTest tests from Tests/
         set(TEST_DIRECTORIES
@@ -603,22 +661,7 @@ if (BUILD_LAGOM)
         # It is therefore not reasonable to run it on Lagom, and we only run the Regex test
         lagom_test(../../Tests/LibRegex/Regex.cpp LIBS LibRegex WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../Tests/LibRegex)
 
-        # JavaScriptTestRunner + LibTest tests
-        # test-js
-        add_executable(test-js
-            ../../Tests/LibJS/test-js.cpp
-            ../../Userland/Libraries/LibTest/JavaScriptTestRunnerMain.cpp)
-        target_link_libraries(test-js LibCore LibTest LibJS)
-        add_test(
-            NAME JS
-            COMMAND test-js --show-progress=false
-        )
-        set_tests_properties(JS PROPERTIES ENVIRONMENT SERENITY_SOURCE_DIR=${SERENITY_PROJECT_ROOT})
 
-        # Extra tests from Tests/LibJS
-        lagom_test(../../Tests/LibJS/test-invalid-unicode-js.cpp LIBS LibJS)
-        lagom_test(../../Tests/LibJS/test-bytecode-js.cpp LIBS LibJS)
-        lagom_test(../../Tests/LibJS/test-value-js.cpp LIBS LibJS)
 
         # Spreadsheet
         add_executable(test-spreadsheet
@@ -659,6 +702,8 @@ if (BUILD_LAGOM)
                 PASS_REGULAR_EXPRESSION "PASS"
             )
         endforeach()
+		endif()
+
 
         # FIXME: When we are using CMake >= 3.21, the library installations can be replaced with RUNTIME_DEPENDENCIES.
         #        https://cmake.org/cmake/help/latest/command/install.html

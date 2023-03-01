@@ -5,11 +5,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Format.h"
 #include <LibCore/System.h>
 #include <LibIPC/Connection.h>
 #include <LibIPC/Stub.h>
 #if !defined(AK_OS_WINDOWS)
-#include <sys/select.h>
+#    include <sys/select.h>
 #endif
 
 namespace IPC {
@@ -76,6 +77,21 @@ ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
     int writes_done = 0;
     size_t initial_size = bytes_to_write.size();
     while (!bytes_to_write.is_empty()) {
+#if defined(AK_OS_WINDOWS)
+        HANDLE h = (HANDLE)_get_osfhandle(m_socket->fd().value());
+        DWORD dwWritten = 0;
+        BOOL bSuccess = WriteFile(h, bytes_to_write.data(), bytes_to_write.size(), &dwWritten, NULL);
+        writes_done++;
+
+        if (!bSuccess) {
+            auto error = GetLastError();
+            dbgln("IPC::Connection::post_message: Unknown error: {}", error);
+            return Error::from_string_literal("IPC::Connection::post_message: Unknown error");
+        }
+
+        bytes_to_write = bytes_to_write.slice(dwWritten);
+#else
+
         auto maybe_nwritten = m_socket->write(bytes_to_write);
         writes_done++;
         if (maybe_nwritten.is_error()) {
@@ -102,6 +118,7 @@ ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
         }
 
         bytes_to_write = bytes_to_write.slice(maybe_nwritten.value());
+#endif
     }
     if (writes_done > 1) {
         dbgln("LibIPC::Connection FIXME Warning, needed {} writes needed to send message of size {}B, this is pretty bad, as it spins on the EventLoop", writes_done, initial_size);

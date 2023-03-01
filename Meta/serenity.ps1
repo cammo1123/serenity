@@ -152,10 +152,10 @@ function is_valid_target() {
 
 function create_build_dir {
     if ($TARGET -ne "lagom") {
-		cmake -GNinja $global:CMAKE_ARGS -S "$env:SERENITY_SOURCE_DIR/Meta/CMake/Superbuild" -B $SUPER_BUILD_DIR
+        cmake -GNinja $global:CMAKE_ARGS -S "$env:SERENITY_SOURCE_DIR/Meta/CMake/Superbuild" -B $global:SUPER_BUILD_DIR
     }
     else {	
-        cmake -GNinja $global:CMAKE_ARGS -S "$env:SERENITY_SOURCE_DIR/Meta/Lagom" -B $SUPER_BUILD_DIR
+        cmake -GNinja $global:CMAKE_ARGS -S "$env:SERENITY_SOURCE_DIR/Meta/Lagom" -B $global:SUPER_BUILD_DIR
     }
 }
 
@@ -275,7 +275,7 @@ function cmd_with_target() {
 }
 
 function ensure_target {
-    if (!(Test-Path "$SUPER_BUILD_DIR/build.ninja")) {
+    if (!(Test-Path "$global:SUPER_BUILD_DIR/build.ninja")) {
         create_build_dir
     }
 }
@@ -294,10 +294,9 @@ function run_tests {
 }
 
 function build_target {
-	if ($TARGET -eq "lagom") {
+    if ($TARGET -eq "lagom") {
 		$EXTRA_CMAKE_ARGS = ""
-		Write-Host "Building Lagom"
-		if ($CMD_ARGS[0] -eq "ladybird") {
+		if ($global:CMD_ARGS[0] -eq "ladybird") {
 			$EXTRA_CMAKE_ARGS = "-DENABLE_LAGOM_LADYBIRD=ON"
 		}
 
@@ -310,7 +309,7 @@ function build_target {
 	
 	if ($args.Count -eq 0) {
 		$env:CMAKE_BUILD_PARALLEL_LEVEL="$env:MAKEJOBS"
-		cmake --build "$SUPER_BUILD_DIR"
+		cmake --build "$global:SUPER_BUILD_DIR"
 	} else {
 		ninja -j "$env:MAKEJOBS" -C "$BUILD_DIR" -- $args
 	}
@@ -321,8 +320,8 @@ function build_image {
 }
 
 function delete_target {
-    if(Test-Path $BUILD_DIR) { Remove-Item $BUILD_DIR -Recurse -Force }
-    if(Test-Path $SUPER_BUILD_DIR) { Remove-Item $SUPER_BUILD_DIR -Recurse -Force }
+    if(Test-Path $global:BUILD_DIR) { Remove-Item $global:BUILD_DIR -Recurse -Force }
+    if(Test-Path $global:SUPER_BUILD_DIR) { Remove-Item $global:SUPER_BUILD_DIR -Recurse -Force }
 }
 
 function build_cmake {

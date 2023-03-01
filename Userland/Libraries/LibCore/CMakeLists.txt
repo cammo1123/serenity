@@ -1,5 +1,4 @@
 set(SOURCES
-	AnonymousBuffer.cpp
 	ArgsParser.cpp
 	ConfigFile.cpp
 	DateTime.cpp
@@ -24,6 +23,7 @@ set(SOURCES
 )
 if (NOT WIN32)
 	list(APPEND SOURCES
+		AnonymousBuffer.cpp
 	    Command.cpp
 		DirIterator.cpp
 	    File.cpp
@@ -39,6 +39,7 @@ if (NOT WIN32)
 	)
 else()
 	list(APPEND SOURCES
+		Windows/AnonymousBuffer.cpp
 		Windows/System.cpp
 		Windows/File.cpp	    
 		Windows/Stream.cpp

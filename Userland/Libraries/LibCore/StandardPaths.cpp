@@ -62,11 +62,14 @@ DeprecatedString StandardPaths::downloads_directory()
 
 DeprecatedString StandardPaths::config_directory()
 {
+    StringBuilder builder;
+    #ifdef AK_OS_WINDOWS
+    #else
     if (auto* config_directory = getenv("XDG_CONFIG_HOME"))
         return LexicalPath::canonicalized_path(config_directory);
 
-    StringBuilder builder;
     builder.append(home_directory());
+    #endif
 #if defined(AK_OS_MACOS)
     builder.append("/Library/Preferences"sv);
 #else

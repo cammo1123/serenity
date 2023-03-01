@@ -109,7 +109,11 @@ ErrorOr<Core::AnonymousBuffer> decode(Decoder& decoder)
     auto size = TRY(decoder.decode_size());
     auto anon_file = TRY(decoder.decode<IPC::File>());
 
+#if !defined(AK_OS_WINDOWS)
     return Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), size);
+#else
+    return Core::AnonymousBuffer::create_from_anon_handle((HANDLE)_get_osfhandle(anon_file.take_fd()), size);
+#endif
 }
 
 template<>
