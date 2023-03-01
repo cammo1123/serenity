@@ -102,14 +102,14 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
         return app.exec();
     }
 
-    auto sql_server_paths = TRY(get_paths_for_helper_process("SQLServer"sv));
-    auto sql_client = TRY(SQL::SQLClient::launch_server_and_create_client(move(sql_server_paths)));
-    auto database = TRY(Browser::Database::create(move(sql_client)));
+    // auto sql_server_paths = TRY(get_paths_for_helper_process("SQLServer"sv));
+    // auto sql_client = TRY(SQL::SQLClient::launch_server_and_create_client(move(sql_server_paths)));
+    // auto database = TRY(Browser::Database::create(move(sql_client)));
 
-    auto cookie_jar = TRY(Browser::CookieJar::create(*database));
+    // auto cookie_jar = TRY(Browser::CookieJar::create(*database));
 
     s_settings = adopt_own_if_nonnull(new Browser::Settings());
-    BrowserWindow window(cookie_jar, webdriver_content_ipc_path);
+    BrowserWindow window(webdriver_content_ipc_path);
     window.setWindowTitle("Ladybird");
     window.resize(800, 600);
     window.show();

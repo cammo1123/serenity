@@ -26,9 +26,8 @@
 extern DeprecatedString s_serenity_resource_root;
 extern Browser::Settings* s_settings;
 
-BrowserWindow::BrowserWindow(Browser::CookieJar& cookie_jar, StringView webdriver_content_ipc_path)
-    : m_cookie_jar(cookie_jar)
-    , m_webdriver_content_ipc_path(webdriver_content_ipc_path)
+BrowserWindow::BrowserWindow(StringView webdriver_content_ipc_path)
+    : m_webdriver_content_ipc_path(webdriver_content_ipc_path)
 {
     m_tabs_container = new QTabWidget(this);
     m_tabs_container->setElideMode(Qt::TextElideMode::ElideRight);
@@ -195,12 +194,12 @@ BrowserWindow::BrowserWindow(Browser::CookieJar& cookie_jar, StringView webdrive
         debug_request("dump-history");
     });
 
-    auto* dump_cookies_action = new QAction("Dump Cookies", this);
-    dump_cookies_action->setIcon(QIcon(QString("%1/res/icons/browser/cookie.png").arg(s_serenity_resource_root.characters())));
-    debug_menu->addAction(dump_cookies_action);
-    QObject::connect(dump_cookies_action, &QAction::triggered, this, [this] {
-        m_cookie_jar.dump_cookies();
-    });
+    // auto* dump_cookies_action = new QAction("Dump Cookies", this);
+    // dump_cookies_action->setIcon(QIcon(QString("%1/res/icons/browser/cookie.png").arg(s_serenity_resource_root.characters())));
+    // debug_menu->addAction(dump_cookies_action);
+    // QObject::connect(dump_cookies_action, &QAction::triggered, this, [this] {
+    //     m_cookie_jar.dump_cookies();
+    // });
 
     auto* dump_local_storage_action = new QAction("Dump Local Storage", this);
     dump_local_storage_action->setIcon(QIcon(QString("%1/res/icons/browser/local-storage.png").arg(s_serenity_resource_root.characters())));
@@ -356,25 +355,25 @@ void BrowserWindow::new_tab(QString const& url, Activate activate)
             new_tab(urls[i].toString(), Activate::No);
     });
 
-    tab_ptr->view().on_get_all_cookies = [this](auto const& url) {
-        return m_cookie_jar.get_all_cookies(url);
-    };
+    // tab_ptr->view().on_get_all_cookies = [this](auto const& url) {
+    //     return m_cookie_jar.get_all_cookies(url);
+    // };
 
-    tab_ptr->view().on_get_named_cookie = [this](auto const& url, auto const& name) {
-        return m_cookie_jar.get_named_cookie(url, name);
-    };
+    // tab_ptr->view().on_get_named_cookie = [this](auto const& url, auto const& name) {
+    //     return m_cookie_jar.get_named_cookie(url, name);
+    // };
 
-    tab_ptr->view().on_get_cookie = [this](auto& url, auto source) -> DeprecatedString {
-        return m_cookie_jar.get_cookie(url, source);
-    };
+    // tab_ptr->view().on_get_cookie = [this](auto& url, auto source) -> DeprecatedString {
+    //     return m_cookie_jar.get_cookie(url, source);
+    // };
 
-    tab_ptr->view().on_set_cookie = [this](auto& url, auto& cookie, auto source) {
-        m_cookie_jar.set_cookie(url, cookie, source);
-    };
+    // tab_ptr->view().on_set_cookie = [this](auto& url, auto& cookie, auto source) {
+    //     m_cookie_jar.set_cookie(url, cookie, source);
+    // };
 
-    tab_ptr->view().on_update_cookie = [this](auto const& cookie) {
-        m_cookie_jar.update_cookie(cookie);
-    };
+    // tab_ptr->view().on_update_cookie = [this](auto const& cookie) {
+    //     m_cookie_jar.update_cookie(cookie);
+    // };
 
     tab_ptr->focus_location_editor();
 

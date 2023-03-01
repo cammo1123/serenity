@@ -205,8 +205,6 @@ ErrorOr<int> Socket::create_fd(SocketDomain domain, SocketType type)
     return System::socket(socket_domain, socket_type | SOCK_CLOEXEC, 0);
 #else
     auto fd = TRY(System::socket(socket_domain, socket_type, 0));
-
-    TRY(System::fcntl(fd, F_SETFD, FD_CLOEXEC));
     return fd;
 #endif
 }

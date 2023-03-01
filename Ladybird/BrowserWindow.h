@@ -26,7 +26,7 @@ class CookieJar;
 class BrowserWindow : public QMainWindow {
     Q_OBJECT
 public:
-    explicit BrowserWindow(Browser::CookieJar&, StringView webdriver_content_ipc_path);
+    explicit BrowserWindow(StringView webdriver_content_ipc_path);
 
     WebContentView& view() const { return m_current_tab->view(); }
 
@@ -60,8 +60,6 @@ private:
     QTabWidget* m_tabs_container { nullptr };
     NonnullOwnPtrVector<Tab> m_tabs;
     Tab* m_current_tab { nullptr };
-
-    Browser::CookieJar& m_cookie_jar;
 
     StringView m_webdriver_content_ipc_path;
 };

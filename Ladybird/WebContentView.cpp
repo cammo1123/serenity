@@ -53,6 +53,9 @@
 #include <QTextEdit>
 #include <QTimer>
 #include <QToolTip>
+#if defined(AK_OS_WINDOWS)
+#    include <AK/Windows/fork.h>
+#endif
 
 WebContentView::WebContentView(StringView webdriver_content_ipc_path)
     : m_webdriver_content_ipc_path(webdriver_content_ipc_path)
@@ -554,7 +557,7 @@ void WebContentView::hideEvent(QHideEvent* event)
     QAbstractScrollArea::hideEvent(event);
     client().async_set_system_visibility_state(false);
 }
-#if !defined(AK_OS_WINDOWS)
+
 void WebContentView::create_client()
 {
     m_client_state = {};
@@ -639,13 +642,6 @@ void WebContentView::create_client()
     // FIXME: Get the screen rect.
     // client().async_update_screen_rects(GUI::Desktop::the().rects(), GUI::Desktop::the().main_screen_index());
 }
-#else
-void WebContentView::create_client()
-{
-    dbgln("WebContentView::create_client()");
-	VERIFY_NOT_REACHED();
-}
-#endif
 
 void WebContentView::handle_web_content_process_crash()
 {
