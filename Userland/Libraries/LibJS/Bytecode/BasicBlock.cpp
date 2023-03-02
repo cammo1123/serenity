@@ -23,8 +23,19 @@ BasicBlock::BasicBlock(DeprecatedString name, size_t size)
     // The main issue we're working around here is that we don't want pointers into the bytecode stream to become invalidated
     // during code generation due to dynamic buffer resizing. Otherwise we could just use a Vector.
     m_buffer_capacity = size;
+
+#if !defined(AK_OS_WINDOWS)
     m_buffer = (u8*)MUST(Core::System::mmap(nullptr, m_buffer_capacity, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0));
     VERIFY(m_buffer != MAP_FAILED);
+#else
+    HANDLE h = CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, m_buffer_capacity, nullptr);
+    VERIFY(h != nullptr);
+
+    m_buffer = (u8*)MapViewOfFile(h, FILE_MAP_ALL_ACCESS, 0, 0, m_buffer_capacity);
+    VERIFY(m_buffer != nullptr);
+
+    CloseHandle(h);
+#endif
 }
 
 BasicBlock::~BasicBlock()
@@ -36,7 +47,12 @@ BasicBlock::~BasicBlock()
         Instruction::destroy(const_cast<Instruction&>(to_destroy));
     }
 
+#if !defined(AK_OS_WINDOWS)
     MUST(Core::System::munmap(m_buffer, m_buffer_capacity));
+#else
+    UnmapViewOfFile(m_buffer);
+#endif
+
 }
 
 void BasicBlock::seal()

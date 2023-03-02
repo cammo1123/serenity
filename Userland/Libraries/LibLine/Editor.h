@@ -35,14 +35,16 @@
 #if !defined(AK_OS_WINDOWS)
 #    include <sys/ioctl.h>
 #    include <termios.h>
-#else 
-#    include <AK/Windows/termios.h>
+#else
 struct winsize {
-	unsigned short ws_row;
-	unsigned short ws_col;
-	unsigned short ws_xpixel;
-	unsigned short ws_ypixel;
+    unsigned short ws_row;
+    unsigned short ws_col;
+    unsigned short ws_xpixel;
+    unsigned short ws_ypixel;
 };
+#    define VERASE 2
+#    define VKILL 4
+#    include <AK/Windows.h>
 #endif
 
 namespace Line {
@@ -159,7 +161,9 @@ public:
 
     void initialize();
 
+#if !defined(AK_OS_WINDOWS)
     void refetch_default_termios();
+#endif
 
     void add_to_history(DeprecatedString const& line);
     bool load_history(DeprecatedString const& path);
@@ -236,8 +240,14 @@ public:
     //
     void transform_suggestion_offsets(size_t& invariant_offset, size_t& static_offset, Span::Mode offset_mode = Span::ByteOriented) const;
 
-    const struct termios& termios() const { return m_termios; }
+#if defined(AK_OS_WINDOWS)
+#else
+    const struct termios& termios() const
+    {
+        return m_termios;
+    }
     const struct termios& default_termios() const { return m_default_termios; }
+#endif
     struct winsize terminal_size() const
     {
         winsize ws { (u16)m_num_lines, (u16)m_num_columns, 0, 0 };
@@ -340,17 +350,7 @@ private:
     ErrorOr<void> cleanup();
     ErrorOr<void> cleanup_suggestions();
     ErrorOr<void> really_quit_event_loop();
-
-    void restore()
-    {
-        VERIFY(m_initialized);
-        tcsetattr(0, TCSANOW, &m_default_termios);
-        m_initialized = false;
-        if (m_configuration.enable_bracketed_paste)
-            warn("\x1b[?2004l");
-        for (auto id : m_signal_handlers)
-            Core::EventLoop::unregister_signal(id);
-    }
+    void restore();
 
     StringMetrics const& current_prompt_metrics() const
     {
@@ -472,10 +472,16 @@ private:
 
     KeyCallbackMachine m_callback_machine;
 
+#if defined(AK_OS_WINDOWS)
+    DWORD m_console_mode { 0 };
+    DWORD m_default_console_mode { 0 };
+#else
     struct termios m_termios {
     };
     struct termios m_default_termios {
     };
+#endif
+
     bool m_was_interrupted { false };
     bool m_previous_interrupt_was_handled_as_interrupt { true };
     bool m_was_resized { false };

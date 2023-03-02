@@ -12,7 +12,7 @@
 #include <LibLine/Editor.h>
 #include <stdio.h>
 #if !defined(AK_OS_WINDOWS)
-#include <sys/wait.h>
+#    include <sys/wait.h>
 #endif
 #include <unistd.h>
 
@@ -270,6 +270,7 @@ void Editor::enter_search()
             return false;
         });
 
+#if !defined(AK_OS_WINDOWS)
         // Whenever the search editor gets a backspace, cycle back between history entries
         // unless we're at the zeroth entry, in which case, allow the deletion.
         m_search_editor->register_key_input_callback(m_termios.c_cc[VERASE], [this](Editor& search_editor) {
@@ -282,6 +283,9 @@ void Editor::enter_search()
             search_editor.erase_character_backwards();
             return false;
         });
+#else
+        dbgln("FIXME: Implement backspace in search editor on Windows");
+#endif
 
         // ^L - This is a source of issues, as the search editor refreshes first,
         // and we end up with the wrong order of prompts, so we will first refresh
@@ -516,7 +520,7 @@ void Editor::uppercase_word()
 
 void Editor::edit_in_external_editor()
 {
-	#if !defined(AK_OS_WINDOWS)
+#if !defined(AK_OS_WINDOWS)
     auto const* editor_command = getenv("EDITOR");
     if (!editor_command)
         editor_command = m_configuration.m_default_text_editor.characters();
@@ -592,9 +596,9 @@ void Editor::edit_in_external_editor()
                 insert(ch);
         }
     }
-	#else
-	dbgln("FIXME: Implement Editor::edit_in_external_editor() for Windows.");
-	VERIFY_NOT_REACHED();
-	#endif
+#else
+    dbgln("FIXME: Implement Editor::edit_in_external_editor() for Windows.");
+    VERIFY_NOT_REACHED();
+#endif
 }
 }

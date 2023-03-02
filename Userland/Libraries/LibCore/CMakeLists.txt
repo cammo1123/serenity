@@ -2,6 +2,7 @@ set(SOURCES
 	ArgsParser.cpp
 	ConfigFile.cpp
 	DateTime.cpp
+	DirIterator.cpp
 	MappedFile.cpp
 	EventLoop.cpp
 	ElapsedTimer.cpp
@@ -25,7 +26,6 @@ if (NOT WIN32)
 	list(APPEND SOURCES
 		AnonymousBuffer.cpp
 	    Command.cpp
-		DirIterator.cpp
 	    File.cpp
 	    LockFile.cpp
 	    Process.cpp
@@ -43,7 +43,6 @@ else()
 		Windows/System.cpp
 		Windows/File.cpp	    
 		Windows/Stream.cpp
-		Windows/DirIterator.cpp
 	)
 endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)

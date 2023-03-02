@@ -23,12 +23,15 @@ namespace JS {
 BlockAllocator::~BlockAllocator()
 {
     for (auto* block : m_blocks) {
+        dbgln("FIXME: _aligned_free({})", block);
         ASAN_UNPOISON_MEMORY_REGION(block, HeapBlock::block_size);
 #ifdef AK_OS_SERENITY
         if (munmap(block, HeapBlock::block_size) < 0) {
             perror("munmap");
             VERIFY_NOT_REACHED();
         }
+#elif defined(AK_OS_WINDOWS)
+        _aligned_free(block);
 #else
         free(block);
 #endif
@@ -37,6 +40,7 @@ BlockAllocator::~BlockAllocator()
 
 void* BlockAllocator::allocate_block([[maybe_unused]] char const* name)
 {
+    dbgln("BlockAllocator::allocate_block({})", name);
     if (!m_blocks.is_empty()) {
         // To reduce predictability, take a random block from the cache.
         size_t random_index = get_random_uniform(m_blocks.size());
@@ -56,7 +60,7 @@ void* BlockAllocator::allocate_block([[maybe_unused]] char const* name)
     VERIFY(block != MAP_FAILED);
 #elif defined(AK_OS_WINDOWS)
     auto* block = (HeapBlock*)_aligned_malloc(HeapBlock::block_size, HeapBlock::block_size);
-	VERIFY(block);
+    VERIFY(block);
 #else
     auto* block = (HeapBlock*)aligned_alloc(HeapBlock::block_size, HeapBlock::block_size);
     VERIFY(block);
@@ -67,12 +71,15 @@ void* BlockAllocator::allocate_block([[maybe_unused]] char const* name)
 void BlockAllocator::deallocate_block(void* block)
 {
     VERIFY(block);
+    dbgln("BlockAllocator::deallocate_block({})", block);
     if (m_blocks.size() >= max_cached_blocks) {
 #ifdef AK_OS_SERENITY
         if (munmap(block, HeapBlock::block_size) < 0) {
             perror("munmap");
             VERIFY_NOT_REACHED();
         }
+#elif defined(AK_OS_WINDOWS)
+        _aligned_free(block);
 #else
         free(block);
 #endif

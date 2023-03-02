@@ -20,11 +20,11 @@ DeprecatedString read_long_version_string()
     auto version = result.value().release;
     auto git_hash = result.value().version;
 
-    return DeprecatedString::formatted("Version {} revision {}", version, git_hash);
 #else
-	dbgln("Core::Version::read_long_version_string() is not implemented on Windows");
-	VERIFY_NOT_REACHED();
+    auto version = "1.0.0"sv;
+    auto git_hash = "a"sv;
 #endif
+    return DeprecatedString::formatted("Version {} revision {}", version, git_hash);
 }
 
 }

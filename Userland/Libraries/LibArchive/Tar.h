@@ -12,9 +12,6 @@
 #include <AK/StringView.h>
 #include <string.h>
 #include <sys/types.h>
-#if defined(AK_OS_WINDOWS)
-#    include <AK/Windows/Types.h>
-#endif
 
 // glibc before 2.28 defines these from sys/types.h, but we don't want
 // TarFileHeader::major() and TarFileHeader::minor() to use those macros

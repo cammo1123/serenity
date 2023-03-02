@@ -28,8 +28,6 @@
 #    include <termios.h>
 #else
 #    include <AK/Windows.h>
-#    include <AK/Windows/Types.h>
-#    include <AK/Windows/mman.h>
 #endif
 #include <signal.h>
 #include <sys/stat.h>
@@ -128,49 +126,19 @@ ErrorOr<DeprecatedString> getcwd();
 ErrorOr<void> ioctl(int fd, unsigned request, ...);
 ErrorOr<struct termios> tcgetattr(int fd);
 ErrorOr<void> tcsetattr(int fd, int optional_actions, struct termios const&);
-ErrorOr<int> tcsetpgrp(int fd, pid_t pgrp);
 ErrorOr<void> chmod(StringView pathname, mode_t mode);
-ErrorOr<void> lchown(StringView pathname, uid_t uid, gid_t gid);
-ErrorOr<void> chown(StringView pathname, uid_t uid, gid_t gid);
-ErrorOr<Optional<struct passwd>> getpwent(Span<char> buffer);
-ErrorOr<Optional<struct passwd>> getpwnam(StringView name);
-ErrorOr<Optional<struct group>> getgrnam(StringView name);
-ErrorOr<Optional<struct passwd>> getpwuid(uid_t);
-ErrorOr<Optional<struct group>> getgrent(Span<char> buffer);
-ErrorOr<Optional<struct group>> getgrgid(gid_t);
-ErrorOr<void> clock_settime(clockid_t clock_id, struct timespec* ts);
-ErrorOr<pid_t> posix_spawn(StringView path, posix_spawn_file_actions_t const* file_actions, posix_spawnattr_t const* attr, char* const arguments[], char* const envp[]);
-ErrorOr<pid_t> posix_spawnp(StringView path, posix_spawn_file_actions_t* const file_actions, posix_spawnattr_t* const attr, char* const arguments[], char* const envp[]);
 ErrorOr<off_t> lseek(int fd, off_t, int whence);
-ErrorOr<void> endgrent();
-
-struct WaitPidResult {
-    pid_t pid;
-    int status;
-};
-ErrorOr<WaitPidResult> waitpid(pid_t waitee, int options = 0);
-ErrorOr<void> setuid(uid_t);
-ErrorOr<void> seteuid(uid_t);
-ErrorOr<void> setgid(gid_t);
-ErrorOr<void> setegid(gid_t);
-ErrorOr<void> setpgid(pid_t pid, pid_t pgid);
-ErrorOr<pid_t> setsid();
-ErrorOr<pid_t> getsid(pid_t pid = 0);
-ErrorOr<void> drop_privileges();
 ErrorOr<bool> isatty(int fd);
 ErrorOr<void> link(StringView old_path, StringView new_path);
 ErrorOr<void> symlink(StringView target, StringView link_path);
 ErrorOr<void> mkdir(StringView path, mode_t);
 ErrorOr<void> chdir(StringView path);
 ErrorOr<void> rmdir(StringView path);
-ErrorOr<pid_t> fork();
 ErrorOr<int> mkstemp(Span<char> pattern);
 ErrorOr<void> fchmod(int fd, mode_t mode);
-ErrorOr<void> fchown(int fd, uid_t, gid_t);
 ErrorOr<void> rename(StringView old_path, StringView new_path);
 ErrorOr<void> unlink(StringView path);
 ErrorOr<void> utime(StringView path, Optional<struct utimbuf>);
-ErrorOr<struct utsname> uname();
 ErrorOr<Array<int, 2>> pipe2(int flags);
 #ifndef AK_OS_ANDROID
 ErrorOr<void> adjtime(const struct timeval* delta, struct timeval* old_delta);
@@ -220,6 +188,43 @@ ErrorOr<void> unlockpt(int fildes);
 ErrorOr<void> access(StringView pathname, int mode);
 ErrorOr<DeprecatedString> readlink(StringView pathname);
 ErrorOr<int> poll(Span<struct pollfd>, int timeout);
+
+#if !defined(AK_OS_WINDOWS)
+ErrorOr<void> clock_settime(clockid_t clock_id, struct timespec* ts);
+ErrorOr<Vector<gid_t>> getgroups();
+ErrorOr<void> setgroups(Span<gid_t const>);
+ErrorOr<void> mknod(StringView pathname, mode_t mode, dev_t dev);
+ErrorOr<void> mkfifo(StringView pathname, mode_t mode);
+ErrorOr<void> fchown(int fd, uid_t, gid_t);
+ErrorOr<struct utsname> uname();
+ErrorOr<pid_t> fork();
+ErrorOr<pid_t> posix_spawn(StringView path, posix_spawn_file_actions_t const* file_actions, posix_spawnattr_t const* attr, char* const arguments[], char* const envp[]);
+ErrorOr<pid_t> posix_spawnp(StringView path, posix_spawn_file_actions_t* const file_actions, posix_spawnattr_t* const attr, char* const arguments[], char* const envp[]);
+ErrorOr<int> tcsetpgrp(int fd, pid_t pgrp);
+ErrorOr<void> lchown(StringView pathname, uid_t uid, gid_t gid);
+ErrorOr<void> chown(StringView pathname, uid_t uid, gid_t gid);
+ErrorOr<Optional<struct passwd>> getpwent(Span<char> buffer);
+ErrorOr<Optional<struct passwd>> getpwnam(StringView name);
+ErrorOr<Optional<struct group>> getgrnam(StringView name);
+ErrorOr<Optional<struct passwd>> getpwuid(uid_t);
+ErrorOr<Optional<struct group>> getgrent(Span<char> buffer);
+ErrorOr<Optional<struct group>> getgrgid(gid_t);
+ErrorOr<void> endgrent();
+
+struct WaitPidResult {
+    pid_t pid;
+    int status;
+};
+ErrorOr<WaitPidResult> waitpid(pid_t waitee, int options = 0);
+ErrorOr<void> setuid(uid_t);
+ErrorOr<void> seteuid(uid_t);
+ErrorOr<void> setgid(gid_t);
+ErrorOr<void> setegid(gid_t);
+ErrorOr<void> setpgid(pid_t pid, pid_t pgid);
+ErrorOr<pid_t> setsid();
+ErrorOr<pid_t> getsid(pid_t pid = 0);
+ErrorOr<void> drop_privileges();
+#endif
 
 class AddressInfoVector {
     AK_MAKE_NONCOPYABLE(AddressInfoVector);

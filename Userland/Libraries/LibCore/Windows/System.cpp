@@ -147,7 +147,11 @@ ErrorOr<void> kill(pid_t, int)
     dbgln("FIXME: Implement kill()");
     return {};
 }
-ErrorOr<void> killpg(int pgrp, int signal);
+ErrorOr<void> killpg(int, int)
+{
+    dbgln("FIXME: Implement killpg()");
+    return {};
+}
 ErrorOr<int> dup(int source_fd)
 {
     int rc = ::dup(source_fd);
@@ -163,28 +167,7 @@ ErrorOr<DeprecatedString> getcwd();
 ErrorOr<void> ioctl(int fd, unsigned request, ...);
 ErrorOr<struct termios> tcgetattr(int fd);
 ErrorOr<void> tcsetattr(int fd, int optional_actions, struct termios const&);
-ErrorOr<int> tcsetpgrp(int fd, pid_t pgrp);
 ErrorOr<void> chmod(StringView pathname, mode_t mode);
-ErrorOr<void> lchown(StringView pathname, uid_t uid, gid_t gid);
-ErrorOr<void> chown(StringView pathname, uid_t uid, gid_t gid);
-ErrorOr<Optional<struct passwd>> getpwent(Span<char> buffer);
-ErrorOr<Optional<struct passwd>> getpwnam(StringView name);
-ErrorOr<Optional<struct group>> getgrnam(StringView name);
-ErrorOr<Optional<struct passwd>> getpwuid(uid_t);
-ErrorOr<Optional<struct group>> getgrent(Span<char> buffer);
-ErrorOr<Optional<struct group>> getgrgid(gid_t);
-ErrorOr<void> clock_settime(clockid_t clock_id, struct timespec* ts);
-ErrorOr<pid_t> posix_spawn(StringView path, posix_spawn_file_actions_t const* file_actions, posix_spawnattr_t const* attr, char* const arguments[], char* const envp[])
-{
-    (void)path;
-    (void)file_actions;
-    (void)attr;
-    (void)arguments;
-    (void)envp;
-    dbgln("FIXME: Implement posix_spawn()");
-    VERIFY_NOT_REACHED();
-}
-ErrorOr<pid_t> posix_spawnp(StringView path, posix_spawn_file_actions_t* const file_actions, posix_spawnattr_t* const attr, char* const arguments[], char* const envp[]);
 ErrorOr<off_t> lseek(int fd, off_t offset, int whence)
 {
     off_t rc = ::lseek(fd, offset, whence);
@@ -193,15 +176,6 @@ ErrorOr<off_t> lseek(int fd, off_t offset, int whence)
     return rc;
 }
 ErrorOr<void> endgrent();
-ErrorOr<WaitPidResult> waitpid(pid_t waitee, int options);
-ErrorOr<void> setuid(uid_t);
-ErrorOr<void> seteuid(uid_t);
-ErrorOr<void> setgid(gid_t);
-ErrorOr<void> setegid(gid_t);
-ErrorOr<void> setpgid(pid_t pid, pid_t pgid);
-ErrorOr<pid_t> setsid();
-ErrorOr<pid_t> getsid(pid_t pid);
-ErrorOr<void> drop_privileges();
 ErrorOr<bool> isatty(int fd);
 ErrorOr<void> link(StringView old_path, StringView new_path);
 ErrorOr<void> symlink(StringView target, StringView link_path);

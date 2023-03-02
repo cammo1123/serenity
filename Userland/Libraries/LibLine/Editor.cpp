@@ -181,10 +181,14 @@ void Editor::set_default_keybinds()
     // Register these last to all the user to override the previous key bindings
     // Normally ^W. `stty werase \^n` can change it to ^N (or something else).
     register_key_input_callback(m_termios.c_cc[VWERASE], EDITOR_INTERNAL_FUNCTION(erase_word_backwards));
-#endif
     // Normally ^U. `stty kill \^n` can change it to ^N (or something else).
     register_key_input_callback(m_termios.c_cc[VKILL], EDITOR_INTERNAL_FUNCTION(kill_line));
     register_key_input_callback(m_termios.c_cc[VERASE], EDITOR_INTERNAL_FUNCTION(erase_character_backwards));
+#else
+    register_key_input_callback(ctrl('W'), EDITOR_INTERNAL_FUNCTION(erase_word_backwards));
+    register_key_input_callback(ctrl('U'), EDITOR_INTERNAL_FUNCTION(kill_line));
+    register_key_input_callback(ctrl('H'), EDITOR_INTERNAL_FUNCTION(erase_character_backwards));
+#endif
 }
 
 Editor::Editor(Configuration configuration)
@@ -200,6 +204,22 @@ Editor::~Editor()
 {
     if (m_initialized)
         restore();
+}
+
+void Editor::restore()
+{
+    VERIFY(m_initialized);
+#if !defined(AK_OS_WINDOWS)
+    tcsetattr(0, TCSANOW, &m_default_termios);
+#else
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    SetConsoleMode(hStdin, m_default_console_mode);
+#endif
+    m_initialized = false;
+    if (m_configuration.enable_bracketed_paste)
+        warn("\x1b[?2004l");
+    for (auto id : m_signal_handlers)
+        Core::EventLoop::unregister_signal(id);
 }
 
 void Editor::ensure_free_lines_from_origin(size_t count)
@@ -544,9 +564,16 @@ void Editor::initialize()
     if (m_initialized)
         return;
 
+#if !defined(AK_OS_WINDOWS)
     struct termios termios;
     tcgetattr(0, &termios);
     m_default_termios = termios; // grab a copy to restore
+#else
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hStdin, &mode);
+    m_default_console_mode = mode;
+#endif
 
     get_terminal_size();
 
@@ -566,11 +593,20 @@ void Editor::initialize()
     // Because we use our own line discipline which includes echoing,
     // we disable ICANON and ECHO.
     if (m_configuration.operation_mode == Configuration::Full) {
+#if !defined(AK_OS_WINDOWS)
         termios.c_lflag &= ~(ECHO | ICANON);
         tcsetattr(0, TCSANOW, &termios);
     }
 
     m_termios = termios;
+#else
+        mode &= ~ENABLE_ECHO_INPUT;
+        mode &= ~ENABLE_LINE_INPUT;
+        SetConsoleMode(hStdin, mode);
+    }
+
+    m_console_mode = mode;
+#endif
 
     set_default_keybinds();
     for (auto& keybind : m_configuration.keybindings)
@@ -591,6 +627,7 @@ void Editor::initialize()
     m_initialized = true;
 }
 
+#if !defined(AK_OS_WINDOWS)
 void Editor::refetch_default_termios()
 {
     struct termios termios;
@@ -600,6 +637,7 @@ void Editor::refetch_default_termios()
         termios.c_lflag &= ~(ECHO | ICANON);
     m_termios = termios;
 }
+#endif
 
 ErrorOr<void> Editor::interrupted()
 {
@@ -722,7 +760,7 @@ int getline(char** lineptr, size_t* n, FILE* stream)
         return -1;
     }
     if (bufptr == NULL) {
-		bufptr = (char *) malloc(128);
+        bufptr = (char*)malloc(128);
         if (bufptr == NULL) {
             return -1;
         }
@@ -730,9 +768,9 @@ int getline(char** lineptr, size_t* n, FILE* stream)
     }
     p = bufptr;
     while (c != EOF) {
-        if ((p - bufptr) > (long long) (size - 1)) {
+        if ((p - bufptr) > (long long)(size - 1)) {
             size = size + 128;
-            bufptr = (char *) realloc(bufptr, size);
+            bufptr = (char*)realloc(bufptr, size);
             if (bufptr == NULL) {
                 return -1;
             }
@@ -1151,6 +1189,7 @@ ErrorOr<void> Editor::handle_read_event()
         // There are no sequences past this point, so short of 'tab', we will want to cleanup the suggestions.
         ArmedScopeGuard suggestion_cleanup { [this] { cleanup_suggestions().release_value_but_fixme_should_propagate_errors(); } };
 
+#if !defined(AK_OS_WINDOWS)
         // Normally ^D. `stty eof \^n` can change it to ^N (or something else), but Serenity doesn't have `stty` yet.
         // Process this here since the keybinds might override its behavior.
         // This only applies when the buffer is empty. at any other time, the behavior should be configurable.
@@ -1158,6 +1197,13 @@ ErrorOr<void> Editor::handle_read_event()
             finish_edit();
             continue;
         }
+#else
+        // On Windows, ^Z is EOF, and ^D is EOL.
+        if ((code_point == 26 || code_point == 4) && m_buffer.size() == 0) {
+            finish_edit();
+            continue;
+        }
+#endif
 
         m_callback_machine.key_pressed(*this, code_point);
         if (!m_callback_machine.should_process_last_pressed_key())
