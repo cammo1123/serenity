@@ -18,8 +18,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <sys/mman.h>
-
 #include <fcntl.h>
 #include <string.h>
 #include <sys/stat.h>

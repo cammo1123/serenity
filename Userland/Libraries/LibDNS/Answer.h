@@ -13,6 +13,10 @@
 #include <AK/Types.h>
 #include <LibIPC/Forward.h>
 
+#if defined(AK_OS_WINDOWS)
+#    undef IN
+#endif
+
 namespace DNS {
 
 enum class RecordType : u16 {
@@ -28,7 +32,7 @@ enum class RecordType : u16 {
 };
 
 enum class RecordClass : u16 {
-    IN = 1
+    IN = 1,
 };
 
 #define MDNS_CACHE_FLUSH 0x8000

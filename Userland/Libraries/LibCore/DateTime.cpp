@@ -8,6 +8,7 @@
 #include <AK/DateConstants.h>
 #include <AK/StringBuilder.h>
 #include <AK/Time.h>
+#include <AK/Windows.h>
 #include <LibCore/DateTime.h>
 #include <errno.h>
 #include <time.h>
@@ -29,7 +30,11 @@ DateTime DateTime::create(int year, int month, int day, int hour, int minute, in
 DateTime DateTime::from_timestamp(time_t timestamp)
 {
     struct tm tm;
+#if !defined(AK_OS_WINDOWS)
     localtime_r(&timestamp, &tm);
+#else
+    localtime_s(&tm, &timestamp);
+#endif
     DateTime dt;
     dt.m_year = tm.tm_year + 1900;
     dt.m_month = tm.tm_mon + 1;
@@ -87,13 +92,21 @@ void DateTime::set_time(int year, int month, int day, int hour, int minute, int 
 DeprecatedString DateTime::to_deprecated_string(StringView format) const
 {
     struct tm tm;
+#if !defined(AK_OS_WINDOWS)
     localtime_r(&m_timestamp, &tm);
+#else
+    localtime_s(&tm, &m_timestamp);
+#endif
     StringBuilder builder;
     int const format_len = format.length();
 
     auto format_time_zone_offset = [&](bool with_separator) {
         struct tm gmt_tm;
+#if !defined(AK_OS_WINDOWS)
         gmtime_r(&m_timestamp, &gmt_tm);
+#else
+        gmtime_s(&gmt_tm, &m_timestamp);
+#endif
 
         gmt_tm.tm_isdst = -1;
         auto gmt_timestamp = mktime(&gmt_tm);
@@ -544,7 +557,11 @@ Optional<DateTime> DateTime::parse(StringView format, DeprecatedString const& st
     // Convert it to local time, since that is what `mktime` expects.
     if (tm_represents_utc_time) {
         auto utc_time = timegm(&tm);
+#if !defined(AK_OS_WINDOWS)
         localtime_r(&utc_time, &tm);
+#else
+        localtime_s(&tm, &utc_time);
+#endif
     }
 
     return DateTime::from_timestamp(mktime(&tm));

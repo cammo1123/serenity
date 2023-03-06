@@ -266,3 +266,9 @@ set(SOURCES
 
 serenity_lib(LibJS js)
 target_link_libraries(LibJS PRIVATE LibCore LibCrypto LibRegex LibSyntax LibLocale LibUnicode)
+
+if (WIN32)
+    target_link_libraries(LibJS PRIVATE kernel32)
+    target_link_libraries(LibJS PRIVATE ws2_32)
+    target_link_libraries(LibJS PRIVATE ntdll)
+endif ()

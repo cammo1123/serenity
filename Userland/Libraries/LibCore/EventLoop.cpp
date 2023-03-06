@@ -31,11 +31,17 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/socket.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/select.h>
+#    include <sys/socket.h>
+#else
+#    include <AK/Windows.h>
+#endif
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#undef EVENT_DEBUG
+#define EVENT_DEBUG 1
 
 #ifdef AK_OS_SERENITY
 #    include <LibCore/Account.h>
@@ -74,21 +80,38 @@ static thread_local HashMap<int, NonnullOwnPtr<EventLoopTimer>>* s_timers;
 static thread_local HashTable<Notifier*>* s_notifiers;
 // The wake pipe is both responsible for notifying us when someone calls wake(), as well as POSIX signals.
 // While wake() pushes zero into the pipe, signal numbers (by defintion nonzero, see signal_numbers.h) are pushed into the pipe verbatim.
+#if !defined(AK_OS_WINDOWS)
 thread_local int EventLoop::s_wake_pipe_fds[2];
 thread_local bool EventLoop::s_wake_pipe_initialized { false };
+#else
+thread_local HANDLE EventLoop::s_wake_pipe_handles[2];
+thread_local bool EventLoop::s_wake_pipe_initialized { false };
+#endif
 
 void EventLoop::initialize_wake_pipes()
 {
     if (!s_wake_pipe_initialized) {
-#if defined(SOCK_NONBLOCK)
+#if !defined(AK_OS_WINDOWS)
+#    if defined(SOCK_NONBLOCK)
         int rc = pipe2(s_wake_pipe_fds, O_CLOEXEC);
-#else
+#    else
         int rc = pipe(s_wake_pipe_fds);
         fcntl(s_wake_pipe_fds[0], F_SETFD, FD_CLOEXEC);
         fcntl(s_wake_pipe_fds[1], F_SETFD, FD_CLOEXEC);
-
-#endif
+#    endif
         VERIFY(rc == 0);
+#else
+        SECURITY_ATTRIBUTES saAttr;
+        saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
+        saAttr.bInheritHandle = TRUE;
+        saAttr.lpSecurityDescriptor = NULL;
+
+        int rc = CreatePipe(&s_wake_pipe_handles[0], &s_wake_pipe_handles[1], &saAttr, 0);
+        if (rc == 0) {
+            dbgln("CreatePipe failed with error {}", GetLastError());
+            perror("CreatePipe");
+        }
+#endif
         s_wake_pipe_initialized = true;
     }
 }
@@ -312,8 +335,13 @@ private:
 };
 
 EventLoop::EventLoop([[maybe_unused]] MakeInspectable make_inspectable)
+#if !defined(AK_OS_WINDOWS)
     : m_wake_pipe_fds(&s_wake_pipe_fds)
+#else
+    : m_wake_pipe_handles(&s_wake_pipe_handles)
+#endif
     , m_private(make<Private>())
+
 {
 #ifdef AK_OS_SERENITY
     if (!s_global_initializers_ran) {
@@ -615,11 +643,21 @@ void EventLoop::handle_signal(int signo)
     // is a window between fork() and exec() where a signal delivered
     // to our fork could be inadvertently routed to the parent process!
     if (getpid() == s_pid) {
+#if !defined(AK_OS_WINDOWS)
         int nwritten = write(s_wake_pipe_fds[1], &signo, sizeof(signo));
         if (nwritten < 0) {
             perror("EventLoop::register_signal: write");
             VERIFY_NOT_REACHED();
         }
+#else
+        DWORD nwritten;
+        CHAR buffer[1];
+        bool success = WriteFile(s_wake_pipe_handles[1], buffer, 1, &nwritten, nullptr);
+        if (!success || nwritten != 1) {
+            dbgln("EventLoop::register_signal: WriteFile failed");
+            VERIFY_NOT_REACHED();
+        }
+#endif
     } else {
         // We're a fork who received a signal, reset s_pid
         s_pid = 0;
@@ -679,34 +717,32 @@ void EventLoop::notify_forked(ForkEvent event)
     VERIFY_NOT_REACHED();
 }
 
+bool handles_are_all_signalled(Vector<HANDLE>& handles)
+{
+    for (auto& handle : handles) {
+        DWORD result = WaitForSingleObject(handle, 0);
+        if (result != WAIT_OBJECT_0)
+            return false;
+    }
+    return true;
+}
+
 void EventLoop::wait_for_event(WaitMode mode)
 {
-    fd_set rfds;
-    fd_set wfds;
 retry:
-
-    // Set up the file descriptors for select().
-    // Basically, we translate high-level event information into low-level selectable file descriptors.
-    FD_ZERO(&rfds);
-    FD_ZERO(&wfds);
-
-    int max_fd = 0;
-    auto add_fd_to_set = [&max_fd](int fd, fd_set& set) {
-        FD_SET(fd, &set);
-        if (fd > max_fd)
-            max_fd = fd;
+    Vector<HANDLE> handles;
+    auto add_handle_to_vector = [&](HANDLE handle) {
+        handles.append(handle);
     };
 
-    int max_fd_added = -1;
     // The wake pipe informs us of POSIX signals as well as manual calls to wake()
-    add_fd_to_set(s_wake_pipe_fds[0], rfds);
-    max_fd = max(max_fd, max_fd_added);
+    add_handle_to_vector(s_wake_pipe_handles[0]);
 
     for (auto& notifier : *s_notifiers) {
         if (notifier->event_mask() & Notifier::Read)
-            add_fd_to_set(notifier->fd(), rfds);
+            add_handle_to_vector(notifier->handle());
         if (notifier->event_mask() & Notifier::Write)
-            add_fd_to_set(notifier->fd(), wfds);
+            add_handle_to_vector(notifier->handle());
         if (notifier->event_mask() & Notifier::Exceptional)
             VERIFY_NOT_REACHED();
     }
@@ -720,7 +756,7 @@ retry:
     // Figure out how long to wait at maximum.
     // This mainly depends on the WaitMode and whether we have pending events, but also the next expiring timer.
     Time now;
-    struct timeval timeout = { 0, 0 };
+    DWORD timeout = INFINITE;
     bool should_wait_forever = false;
     if (mode == WaitMode::WaitForEvents && queued_events_is_empty) {
         auto next_timer_expiration = get_next_timer_expiration();
@@ -729,55 +765,46 @@ retry:
             auto computed_timeout = next_timer_expiration.value() - now;
             if (computed_timeout.is_negative())
                 computed_timeout = Time::zero();
-            timeout = computed_timeout.to_timeval();
+            timeout = static_cast<DWORD>(computed_timeout.to_milliseconds());
         } else {
             should_wait_forever = true;
         }
     }
 
-try_select_again:
-    // select() and wait for file system events, calls to wake(), POSIX signals, or timer expirations.
-    int marked_fd_count = select(max_fd + 1, &rfds, &wfds, nullptr, should_wait_forever ? nullptr : &timeout);
-    // Because POSIX, we might spuriously return from select() with EINTR; just select again.
-    if (marked_fd_count < 0) {
-        int saved_errno = errno;
-        if (saved_errno == EINTR) {
-            if (m_exit_requested)
-                return;
-            goto try_select_again;
-        }
-        dbgln("Core::EventLoop::wait_for_event: {} ({}: {})", marked_fd_count, saved_errno, strerror(saved_errno));
+    HANDLE handles_array[handles.size()];
+    for (size_t i = 0; i < handles.size(); ++i)
+        handles_array[i] = handles[i];
+
+    DWORD marked_handle_count = WaitForMultipleObjects(handles.size(), handles_array, FALSE, should_wait_forever ? INFINITE : timeout);
+    // Because Windows, we might spuriously return from WaitForMultipleObjects() with WAIT_FAILED and GetLastError() == ERROR_INVALID_HANDLE; just wait again.
+    if (marked_handle_count == WAIT_FAILED) {
+        dbgln("Core::EventLoop::wait_for_event: {}", GetLastError());
         VERIFY_NOT_REACHED();
     }
 
-    // We woke up due to a call to wake() or a POSIX signal.
-    // Handle signals and see whether we need to handle events as well.
-    if (FD_ISSET(s_wake_pipe_fds[0], &rfds)) {
-        int wake_events[8];
-        ssize_t nread;
-        // We might receive another signal while read()ing here. The signal will go to the handle_signal properly,
+    // We woke up due to a call to wake(), a timer expiration or a handle becoming signalled.
+    // Handle handles and see whether we need to handle events as well.
+    if (marked_handle_count == WAIT_OBJECT_0) {
+        dbgln("Core::EventLoop::wait_for_event: woke up due to wake()");
+        uint64_t wake_value;
+        DWORD nread = 0;
+        // We might receive another signal while ReadFile()ing here. The signal will go to the handle_signal properly,
         // but we get interrupted. Therefore, just retry while we were interrupted.
         do {
-            errno = 0;
-            nread = read(s_wake_pipe_fds[0], wake_events, sizeof(wake_events));
-            if (nread == 0)
-                break;
-        } while (nread < 0 && errno == EINTR);
-        if (nread < 0) {
-            perror("Core::EventLoop::wait_for_event: read from wake pipe");
-            VERIFY_NOT_REACHED();
-        }
-        VERIFY(nread > 0);
+            if (!ReadFile(s_wake_pipe_handles[0], &wake_value, sizeof(wake_value), &nread, nullptr))
+                VERIFY_NOT_REACHED();
+        } while (nread < sizeof(wake_value));
+
         bool wake_requested = false;
-        int event_count = nread / sizeof(wake_events[0]);
-        for (int i = 0; i < event_count; i++) {
-            if (wake_events[i] != 0)
-                dispatch_signal(wake_events[i]);
+        while (nread >= sizeof(wake_value)) {
+            nread -= sizeof(wake_value);
+            if (wake_value != 0)
+                dispatch_signal(wake_value);
             else
                 wake_requested = true;
         }
 
-        if (!wake_requested && nread == sizeof(wake_events))
+        if (!wake_requested && nread == sizeof(wake_value))
             goto retry;
     }
 
@@ -808,19 +835,31 @@ try_select_again:
         }
     }
 
-    if (!marked_fd_count)
-        return;
+    if (marked_handle_count == WAIT_TIMEOUT) {
+        if (mode == WaitMode::WaitForEvents)
+            return;
+        VERIFY(mode == WaitMode::WaitForAllEvents);
+        // If we're not waiting for specific events, we only return when all handles are signalled.
+        if (handles_are_all_signalled(handles))
+            return;
+        goto retry;
+    }
 
-    // Handle file system notifiers by making them normal events.
+    if (marked_handle_count == WAIT_FAILED) {
+        perror("Core::EventLoop::wait_for_event: WaitForMultipleObjects");
+        VERIFY_NOT_REACHED();
+    }
+
+    DWORD marked_handle_index = marked_handle_count - WAIT_OBJECT_0;
+    if (marked_handle_index < handles.size() && handles[marked_handle_index] == s_wake_pipe_handles[0])
+        goto retry;
+
+    // Handle notifiers by making them normal events.
     for (auto& notifier : *s_notifiers) {
-        if (FD_ISSET(notifier->fd(), &rfds)) {
-            if (notifier->event_mask() & Notifier::Event::Read)
-                post_event(*notifier, make<NotifierReadEvent>(notifier->fd()));
-        }
-        if (FD_ISSET(notifier->fd(), &wfds)) {
-            if (notifier->event_mask() & Notifier::Event::Write)
-                post_event(*notifier, make<NotifierWriteEvent>(notifier->fd()));
-        }
+        if (notifier->event_mask() & Notifier::Read)
+            post_event(*notifier, make<NotifierReadEvent>(notifier->handle()));
+        if (notifier->event_mask() & Notifier::Exceptional)
+            post_event(*notifier, make<NotifierWriteEvent>(notifier->handle()));
     }
 }
 
@@ -901,11 +940,10 @@ void EventLoop::wake_current()
 
 void EventLoop::wake()
 {
-    dbgln_if(EVENTLOOP_DEBUG, "Core::EventLoop::wake()");
-    int wake_event = 0;
-    int nwritten = write((*m_wake_pipe_fds)[1], &wake_event, sizeof(wake_event));
-    if (nwritten < 0) {
-        perror("EventLoop::wake: write");
+    dbgln("Core::EventLoop::wake()");
+    auto wake_event = 0;
+    DWORD nwritten;
+    if (!WriteFile(s_wake_pipe_handles[1], &wake_event, sizeof(wake_event), &nwritten, nullptr)) {
         VERIFY_NOT_REACHED();
     }
 }
@@ -921,5 +959,4 @@ EventLoop::QueuedEvent::QueuedEvent(QueuedEvent&& other)
     , event(move(other.event))
 {
 }
-
 }

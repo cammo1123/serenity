@@ -675,8 +675,13 @@ static ErrorOr<void> encode_header(ByteBuffer& bytes, Profile const& profile)
 
     time_t profile_timestamp = profile.creation_timestamp();
     struct tm tm;
+#if !defined(AK_OS_WINDOWS)
     if (!gmtime_r(&profile_timestamp, &tm))
         return Error::from_errno(errno);
+#else
+    if (gmtime_s(&tm, (time_t const*)&profile_timestamp) != 0)
+        return Error::from_errno(errno);
+#endif
     raw_header.profile_creation_time.year = tm.tm_year + 1900;
     raw_header.profile_creation_time.month = tm.tm_mon + 1;
     raw_header.profile_creation_time.day = tm.tm_mday;

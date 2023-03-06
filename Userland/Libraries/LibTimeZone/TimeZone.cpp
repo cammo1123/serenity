@@ -33,13 +33,21 @@ public:
         : m_file(fopen("/etc/timezone", mode))
     {
         if (m_file)
+#if !defined(AK_OS_WINDOWS)
             flockfile(m_file);
+#else
+            _lock_file(m_file);
+#endif
     }
 
     ~TimeZoneFile()
     {
         if (m_file) {
+#if !defined(AK_OS_WINDOWS)
             funlockfile(m_file);
+#else
+            _unlock_file(m_file);
+#endif
             fclose(m_file);
         }
     }
@@ -104,6 +112,8 @@ StringView current_time_zone()
 
 #ifdef AK_OS_SERENITY
     return system_time_zone();
+#elif defined(AK_OS_WINDOWS)
+	return "UTC"sv;
 #else
     static constexpr auto zoneinfo = "/zoneinfo/"sv;
     char buffer[PATH_MAX];

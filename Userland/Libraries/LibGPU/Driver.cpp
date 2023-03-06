@@ -8,7 +8,11 @@
 #include <AK/HashMap.h>
 #include <AK/WeakPtr.h>
 #include <LibGPU/Driver.h>
-#include <dlfcn.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <dlfcn.h>
+#else
+#    include <AK/Windows.h>
+#endif
 
 namespace GPU {
 
@@ -29,6 +33,7 @@ static HashMap<StringView, char const*> const s_driver_path_map
 
 static HashMap<DeprecatedString, WeakPtr<Driver>> s_loaded_drivers;
 
+#if !defined(AK_OS_WINDOWS)
 ErrorOr<NonnullRefPtr<Driver>> Driver::try_create(StringView driver_name)
 {
     // Check if the library for this driver is already loaded
@@ -62,6 +67,42 @@ Driver::~Driver()
 {
     dlclose(m_dlopen_result);
 }
+#else
+ErrorOr<NonnullRefPtr<Driver>> Driver::try_create(StringView driver_name)
+{
+    // Check if the library for this driver is already loaded
+    auto already_loaded_driver = s_loaded_drivers.find(driver_name);
+    if (already_loaded_driver != s_loaded_drivers.end() && !already_loaded_driver->value.is_null())
+        return *already_loaded_driver->value;
+
+    // Nope, we need to load the library
+    auto it = s_driver_path_map.find(driver_name);
+    if (it == s_driver_path_map.end())
+        return Error::from_string_literal("The requested GPU driver was not found in the list of allowed driver libraries");
+
+    HMODULE lib = LoadLibraryA(it->value); // Load the library
+    if (!lib)
+        return Error::from_string_literal("The library for the requested GPU driver could not be opened");
+
+    auto serenity_gpu_create_device = reinterpret_cast<serenity_gpu_create_device_t>(GetProcAddress(lib, "serenity_gpu_create_device")); // Get the address of the function
+    if (!serenity_gpu_create_device) {
+        FreeLibrary(lib); // Release the library if function not found
+        return Error::from_string_literal("The library for the requested GPU driver does not contain serenity_gpu_create_device()");
+    }
+
+    auto driver = adopt_ref(*new Driver(lib, serenity_gpu_create_device)); // Create the driver object
+
+    s_loaded_drivers.set(driver_name, driver->make_weak_ptr());
+
+    return driver;
+}
+
+Driver::~Driver()
+{
+    FreeLibrary((HMODULE) m_dlopen_result);
+}
+#endif
+
 
 ErrorOr<NonnullOwnPtr<Device>> Driver::try_create_device(Gfx::IntSize size)
 {

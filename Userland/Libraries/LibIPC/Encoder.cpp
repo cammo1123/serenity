@@ -136,7 +136,11 @@ ErrorOr<void> encode(Encoder& encoder, Core::AnonymousBuffer const& buffer)
 
     if (buffer.is_valid()) {
         TRY(encoder.encode_size(buffer.size()));
+#if !defined(AK_OS_WINDOWS)
         TRY(encoder.encode(IPC::File { buffer.fd() }));
+#else
+        TRY(encoder.encode(IPC::File { _open_osfhandle((intptr_t)buffer.file_handle(), 0) }));
+#endif
     }
 
     return {};

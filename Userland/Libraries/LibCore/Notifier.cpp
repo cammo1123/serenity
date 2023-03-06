@@ -10,10 +10,17 @@
 
 namespace Core {
 
+#if !defined(AK_OS_WINDOWS)
 Notifier::Notifier(int fd, unsigned event_mask, Object* parent)
     : Object(parent)
     , m_fd(fd)
     , m_event_mask(event_mask)
+#else
+Notifier::Notifier(HANDLE handle, unsigned event_mask, Object* parent)
+    : Object(parent)
+    , m_handle(handle)
+    , m_event_mask(event_mask)
+#endif
 {
     set_enabled(true);
 }
@@ -25,7 +32,11 @@ Notifier::~Notifier()
 
 void Notifier::set_enabled(bool enabled)
 {
+#if !defined(AK_OS_WINDOWS)
     if (m_fd < 0)
+#else
+    if (m_handle == INVALID_HANDLE_VALUE)
+#endif
         return;
     if (enabled)
         Core::EventLoop::register_notifier({}, *this);
@@ -35,10 +46,17 @@ void Notifier::set_enabled(bool enabled)
 
 void Notifier::close()
 {
+#if !defined(AK_OS_WINDOWS)
     if (m_fd < 0)
         return;
     set_enabled(false);
     m_fd = -1;
+#else
+    if (m_handle == INVALID_HANDLE_VALUE)
+        return;
+    set_enabled(false);
+    m_handle = INVALID_HANDLE_VALUE;
+#endif
 }
 
 void Notifier::event(Core::Event& event)

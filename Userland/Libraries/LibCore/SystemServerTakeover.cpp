@@ -32,7 +32,11 @@ static void parse_sockets_from_system_server()
     s_overtaken_sockets_parsed = true;
     // We wouldn't want our children to think we're passing
     // them a socket either, so unset the env variable.
+#if !defined(AK_OS_WINDOWS)
     unsetenv(socket_takeover);
+#else
+    _putenv_s(socket_takeover, "");
+#endif
 }
 
 ErrorOr<NonnullOwnPtr<Core::LocalSocket>> take_over_socket_from_system_server(DeprecatedString const& socket_path)
@@ -53,10 +57,14 @@ ErrorOr<NonnullOwnPtr<Core::LocalSocket>> take_over_socket_from_system_server(De
     }
 
     // Sanity check: it has to be a socket.
-    auto stat = TRY(Core::System::fstat(fd));
 
+#if !defined(AK_OS_WINDOWS)
+    auto stat = TRY(Core::System::fstat(fd));
     if (!S_ISSOCK(stat.st_mode))
         return Error::from_string_literal("The fd we got from SystemServer is not a socket");
+#else
+    dbgln("FIXME: Implement S_ISSOCK");
+#endif
 
     auto socket = TRY(Core::LocalSocket::adopt_fd(fd));
     // It had to be !CLOEXEC for obvious reasons, but we

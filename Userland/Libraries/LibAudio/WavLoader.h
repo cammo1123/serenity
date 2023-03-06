@@ -18,7 +18,7 @@
 namespace Audio {
 
 // constants for handling the WAV header data
-static constexpr unsigned const WAVE_FORMAT_PCM = 0x0001;        // PCM
+static constexpr unsigned const WAVE_FORMAT_PCM = 0x0001; // PCM
 static constexpr unsigned const WAVE_FORMAT_IEEE_FLOAT = 0x0003; // IEEE float
 static constexpr unsigned const WAVE_FORMAT_ALAW = 0x0006;       // 8-bit ITU-T G.711 A-law
 static constexpr unsigned const WAVE_FORMAT_MULAW = 0x0007;      // 8-bit ITU-T G.711 µ-law

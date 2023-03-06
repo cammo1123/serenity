@@ -11,6 +11,9 @@
 #include <AK/Forward.h>
 #include <AK/Stream.h>
 #include <LibCore/Object.h>
+#if defined(AK_OS_WINDOWS)
+#    include <AK/Windows.h>
+#endif
 
 namespace Core {
 
@@ -70,7 +73,6 @@ class IODevice : public Object {
 public:
     virtual ~IODevice() override = default;
 
-    int fd() const { return m_fd; }
     OpenMode mode() const { return m_mode; }
     bool is_open() const { return m_mode != OpenMode::NotOpen; }
     bool eof() const { return m_eof; }
@@ -94,8 +96,7 @@ public:
     bool can_read_line() const;
 
     bool can_read() const;
-    bool can_read_only_from_buffer() const { return !m_buffered_data.is_empty() && !can_read_from_fd(); }
-
+    bool can_read_only_from_buffer() const;
     bool seek(i64, SeekMode = SeekMode::SetPosition, off_t* = nullptr);
 
     virtual bool open(OpenMode) = 0;
@@ -111,18 +112,32 @@ public:
 protected:
     explicit IODevice(Object* parent = nullptr);
 
+#if defined(AK_OS_WINDOWS)
+    HANDLE handle() const { return m_handle; }
+    void set_handle(HANDLE);
+    virtual void did_update_handle(HANDLE) { }
+#else
+    SOCKET fd() const { return m_fd; }
     void set_fd(int);
-    void set_mode(OpenMode mode) { m_mode = mode; }
+    virtual void did_update_fd(int) { }
+#endif
+    void set_mode(OpenMode mode)
+    {
+        m_mode = mode;
+    }
     void set_error(int error) const { m_error = error; }
     void set_eof(bool eof) const { m_eof = eof; }
 
-    virtual void did_update_fd(int) { }
-
 private:
     bool populate_read_buffer(size_t size = 1024) const;
-    bool can_read_from_fd() const;
 
+#if defined(AK_OS_WINDOWS)
+    bool can_read_from_handle() const;
+    HANDLE m_handle { INVALID_HANDLE_VALUE };
+#else
+    bool can_read_from_fd() const;
     int m_fd { -1 };
+#endif
     OpenMode m_mode { OpenMode::NotOpen };
     mutable int m_error { 0 };
     mutable bool m_eof { false };

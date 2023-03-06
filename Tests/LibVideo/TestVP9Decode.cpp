@@ -42,15 +42,15 @@ static void decode_video(StringView path, size_t expected_frame_count)
 
 TEST_CASE(webm_in_vp9)
 {
-    decode_video("./vp9_in_webm.webm"sv, 25);
+    decode_video("C:/Users/camer/src/serenity/Tests/LibVideo/vp9_in_webm.webm"sv, 25);
 }
 
 BENCHMARK_CASE(vp9_4k)
 {
-    decode_video("./vp9_4k.webm"sv, 2);
+    decode_video("C:/Users/camer/src/serenity/Tests/LibVideo/vp9_4k.webm"sv, 2);
 }
 
 BENCHMARK_CASE(vp9_clamp_reference_mvs)
 {
-    decode_video("./vp9_clamp_reference_mvs.webm"sv, 92);
+    decode_video("C:/Users/camer/src/serenity/Tests/LibVideo/vp9_clamp_reference_mvs.webm"sv, 92);
 }

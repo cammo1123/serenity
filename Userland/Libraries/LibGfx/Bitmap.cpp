@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/mman.h>
 
 namespace Gfx {
 
@@ -491,8 +490,11 @@ ErrorOr<NonnullRefPtr<Gfx::Bitmap>> Bitmap::inverted() const
 Bitmap::~Bitmap()
 {
     if (m_needs_munmap) {
-        int rc = munmap(m_data, size_in_bytes());
-        VERIFY(rc == 0);
+#if !defined(AK_OS_WINDOWS)
+        MUST(Core::System::munmap(m_data, size_in_bytes()));
+#else
+        VirtualFree(m_data, 0, MEM_RELEASE);
+#endif
     }
     m_data = nullptr;
     delete[] m_palette;
@@ -568,15 +570,26 @@ ErrorOr<BackingStore> Bitmap::allocate_backing_store(BitmapFormat format, IntSiz
     auto const pitch = minimum_pitch(size.width() * scale_factor, format);
     auto const data_size_in_bytes = size_in_bytes(pitch, size.height() * scale_factor);
 
+#if !defined(AK_OS_WINDOWS)
     int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
-#ifdef AK_OS_SERENITY
+#    ifdef AK_OS_SERENITY
     map_flags |= MAP_PURGEABLE;
     void* data = mmap_with_name(nullptr, data_size_in_bytes, PROT_READ | PROT_WRITE, map_flags, 0, 0, DeprecatedString::formatted("GraphicsBitmap [{}]", size).characters());
-#else
+#    else
     void* data = mmap(nullptr, data_size_in_bytes, PROT_READ | PROT_WRITE, map_flags, -1, 0);
-#endif
+#    endif
     if (data == MAP_FAILED)
         return Error::from_errno(errno);
+    return BackingStore { data, pitch, data_size_in_bytes };
+#else
+    DWORD protect = PAGE_READWRITE;
+    DWORD alloc_type = MEM_COMMIT | MEM_RESERVE;
+
+    void* data = VirtualAlloc(nullptr, data_size_in_bytes, alloc_type, protect);
+    if (data == nullptr)
+        return Error::from_errno(GetLastError());
+
+#endif
     return BackingStore { data, pitch, data_size_in_bytes };
 }
 

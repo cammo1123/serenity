@@ -17,6 +17,7 @@
 #include <AK/Time.h>
 #include <AK/Vector.h>
 #include <AK/WeakPtr.h>
+#include <AK/Windows.h>
 #include <LibCore/DeferredInvocationContext.h>
 #include <LibCore/Event.h>
 #include <LibCore/Forward.h>
@@ -61,6 +62,9 @@ public:
     enum class WaitMode {
         WaitForEvents,
         PollForEvents,
+#if defined(AK_OS_WINDOWS)
+        WaitForAllEvents,
+#endif
     };
 
     explicit EventLoop(MakeInspectable = MakeInspectable::No);
@@ -146,11 +150,17 @@ private:
     bool m_exit_requested { false };
     int m_exit_code { 0 };
 
+#if !defined(AK_OS_WINDOWS)
     static thread_local int s_wake_pipe_fds[2];
-    static thread_local bool s_wake_pipe_initialized;
-
     // The wake pipe of this event loop needs to be accessible from other threads.
     int (*m_wake_pipe_fds)[2];
+#else
+    static thread_local HANDLE s_wake_pipe_handles[2];
+    // The wake pipe of this event loop needs to be accessible from other threads.
+    HANDLE (*m_wake_pipe_handles)
+    [2];
+#endif
+    static thread_local bool s_wake_pipe_initialized;
 
     struct Private;
     NonnullOwnPtr<Private> m_private;

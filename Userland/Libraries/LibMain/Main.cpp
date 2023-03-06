@@ -10,6 +10,10 @@
 #include <LibMain/Main.h>
 #include <string.h>
 #include <time.h>
+#if defined(AK_OS_WINDOWS)
+#    include <stringapiset.h>
+#    include <windows.h>
+#endif
 
 namespace Main {
 
@@ -29,7 +33,11 @@ void set_return_code_for_errors(int code)
 
 int main(int argc, char** argv)
 {
+#ifdef AK_OS_WINDOWS
+    _tzset();
+#else
     tzset();
+#endif
 
     Vector<StringView> arguments;
     arguments.ensure_capacity(argc);

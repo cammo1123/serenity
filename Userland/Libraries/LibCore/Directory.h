@@ -19,6 +19,12 @@
 #include <LibCore/File.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#if defined(AK_OS_WINDOWS)
+#    include <sys/stat.h>
+#    include <sys/types.h>
+#    include <io.h>
+#    include <AK/Windows.h>
+#endif
 
 namespace Core {
 
@@ -38,11 +44,9 @@ public:
 
     static ErrorOr<Directory> create(LexicalPath path, CreateDirectories, mode_t creation_mode = 0755);
     static ErrorOr<Directory> create(DeprecatedString path, CreateDirectories, mode_t creation_mode = 0755);
-    static ErrorOr<Directory> adopt_fd(int fd, LexicalPath path);
 
     ErrorOr<NonnullOwnPtr<File>> open(StringView filename, File::OpenMode mode) const;
     ErrorOr<struct stat> stat() const;
-    int fd() const { return m_directory_fd; }
 
     LexicalPath const& path() const { return m_path; }
 
@@ -52,14 +56,30 @@ public:
 
     ErrorOr<void> chown(uid_t, gid_t);
 
+#if !defined(AK_OS_WINDOWS)
+    static ErrorOr<Directory> adopt_fd(int fd, LexicalPath);
     static ErrorOr<bool> is_valid_directory(int fd);
+#else
+    static ErrorOr<Directory> adopt_handle(HANDLE handle, LexicalPath);
+	static ErrorOr<bool> is_valid_directory(HANDLE handle);
+#endif
 
 private:
+#if !defined(AK_OS_WINDOWS)
     Directory(int directory_fd, LexicalPath path);
+    int fd() const { return m_directory_fd; }
+#else
+	Directory(HANDLE directory_handle, LexicalPath path);
+    HANDLE handle() const { return m_directory_handle; }
+#endif
     static ErrorOr<void> ensure_directory(LexicalPath const& path, mode_t creation_mode = 0755);
 
     LexicalPath m_path;
+#if !defined(AK_OS_WINDOWS)
     int m_directory_fd;
+#else
+	HANDLE m_directory_handle;
+#endif
 };
 
 }

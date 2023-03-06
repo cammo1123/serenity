@@ -9,6 +9,7 @@
 
 namespace Core {
 
+#if !defined(AK_OS_WINDOWS)
 static DirectoryEntry::Type directory_entry_type_from_posix(unsigned char dt_constant)
 {
     switch (dt_constant) {
@@ -33,13 +34,21 @@ static DirectoryEntry::Type directory_entry_type_from_posix(unsigned char dt_con
     }
     VERIFY_NOT_REACHED();
 }
+#endif
 
 DirectoryEntry DirectoryEntry::from_dirent(dirent const& de)
 {
+#if !defined(AK_OS_WINDOWS)
     return DirectoryEntry {
         .type = directory_entry_type_from_posix(de.d_type),
         .name = de.d_name,
     };
+#else
+    return DirectoryEntry {
+        .type = DirectoryEntry::Type::File,
+        .name = de.d_name,
+    };
+#endif
 };
 
 }

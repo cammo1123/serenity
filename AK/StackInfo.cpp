@@ -82,12 +82,16 @@ StackInfo::StackInfo()
     m_size = (size_t)thread_stack.ss_size;
     m_base = top_of_stack - m_size;
 #elif defined(AK_OS_WINDOWS)
-    ULONG_PTR low_limit = 0;
-    ULONG_PTR high_limit = 0;
-    GetCurrentThreadStackLimits(&low_limit, &high_limit);
+    PNT_TIB64 currentP = reinterpret_cast<PNT_TIB64>(NtCurrentTeb());
+    MEMORY_BASIC_INFORMATION mbi;
+    if (!VirtualQuery(&mbi, &mbi, sizeof(mbi)))
+        VERIFY_NOT_REACHED();
 
-    m_base = static_cast<FlatPtr>(low_limit);
-    m_size = static_cast<size_t>(high_limit - low_limit);
+    uint8_t const* stackTop = reinterpret_cast<uint8_t const*>(currentP->StackBase);
+    uint8_t const* stackBottom = reinterpret_cast<uint8_t const*>(mbi.AllocationBase);
+
+    m_base = (FlatPtr)stackBottom;
+    m_size = stackTop - stackBottom;
 #else
 #    pragma message "StackInfo not supported on this platform! Recursion checks and stack scans may not work properly"
     m_size = (size_t)~0;

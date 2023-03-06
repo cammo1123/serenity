@@ -10,7 +10,9 @@
 #include <LibJS/Heap/Heap.h>
 #include <LibJS/Heap/HeapBlock.h>
 #include <stdio.h>
+#if !defined(AK_OS_WINDOWS)
 #include <sys/mman.h>
+#endif
 
 #ifdef HAS_ADDRESS_SANITIZER
 #    include <sanitizer/asan_interface.h>

@@ -13,6 +13,9 @@
 #include <AK/WeakPtr.h>
 #include <LibCore/DeferredInvocationContext.h>
 #include <LibCore/Forward.h>
+#if defined(AK_OS_WINDOWS)
+#    include <AK/Windows.h>
+#endif
 
 namespace Core {
 
@@ -81,6 +84,7 @@ private:
 
 class NotifierReadEvent final : public Event {
 public:
+#if !defined(AK_OS_WINDOWS)
     explicit NotifierReadEvent(int fd)
         : Event(Event::NotifierRead)
         , m_fd(fd)
@@ -92,10 +96,24 @@ public:
 
 private:
     int m_fd;
+#else
+    explicit NotifierReadEvent(HANDLE handle)
+        : Event(Event::NotifierRead)
+        , m_handle(handle)
+    {
+    }
+    ~NotifierReadEvent() = default;
+
+    HANDLE handle() const { return m_handle; }
+
+private:
+    HANDLE m_handle;
+#endif
 };
 
 class NotifierWriteEvent final : public Event {
 public:
+#if !defined(AK_OS_WINDOWS)
     explicit NotifierWriteEvent(int fd)
         : Event(Event::NotifierWrite)
         , m_fd(fd)
@@ -107,6 +125,19 @@ public:
 
 private:
     int m_fd;
+#else
+    explicit NotifierWriteEvent(HANDLE handle)
+        : Event(Event::NotifierWrite)
+        , m_handle(handle)
+    {
+    }
+    ~NotifierWriteEvent() = default;
+
+    HANDLE handle() const { return m_handle; }
+
+private:
+    HANDLE m_handle;
+#endif
 };
 
 class ChildEvent final : public Event {

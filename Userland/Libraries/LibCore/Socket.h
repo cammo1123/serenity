@@ -13,6 +13,13 @@
 #include <AK/Time.h>
 #include <LibCore/Notifier.h>
 #include <LibCore/SocketAddress.h>
+#include <LibIPC/Forward.h>
+#include <errno.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <netdb.h>
+#else
+#    define MSG_NOSIGNAL 0
+#endif
 
 namespace Core {
 

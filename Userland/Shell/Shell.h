@@ -22,7 +22,11 @@
 #include <LibCore/Object.h>
 #include <LibLine/Editor.h>
 #include <LibMain/Main.h>
+#if !defined(AK_OS_WINDOWS)
 #include <termios.h>
+#else 
+#include <AK/Windows/termios.h>
+#endif
 
 #define ENUMERATE_SHELL_BUILTINS()     \
     __ENUMERATE_SHELL_BUILTIN(alias)   \

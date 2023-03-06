@@ -16,6 +16,20 @@ static bool files_have_same_contents(DeprecatedString filename1, DeprecatedStrin
     return contents1 == contents2;
 }
 
+static DeprecatedString get_output_path()
+{
+#if !defined(AK_OS_WINDOWS)
+    return "/tmp/output.txt";
+#else
+    LPTSTR temp_path_buffer = new TCHAR[MAX_PATH];
+    if (GetTempPathA(MAX_PATH, temp_path_buffer) == 0) {
+        warnln("Failed to get temp path");
+        VERIFY_NOT_REACHED();
+    }
+    return DeprecatedString::formatted("{}output.txt", temp_path_buffer);
+#endif
+}
+
 TEST_CASE(file_readline)
 {
     auto path = "long_lines.txt";
@@ -25,7 +39,7 @@ TEST_CASE(file_readline)
         VERIFY_NOT_REACHED();
     }
     auto file = file_or_error.release_value();
-    auto output_path = "/tmp/output.txt";
+    auto output_path = get_output_path();
     auto outfile_or_error = Core::DeprecatedFile::open(output_path, Core::OpenMode::WriteOnly);
     auto outputfile = outfile_or_error.release_value();
     while (file->can_read_line()) {
@@ -35,7 +49,7 @@ TEST_CASE(file_readline)
     file->close();
     outputfile->close();
     VERIFY(files_have_same_contents(path, output_path));
-    unlink(output_path);
+    unlink(output_path.characters());
 }
 
 TEST_CASE(file_get_read_position)
@@ -79,7 +93,7 @@ TEST_CASE(file_lines_range)
         VERIFY_NOT_REACHED();
     }
     auto file = file_or_error.release_value();
-    auto output_path = "/tmp/output.txt";
+    auto output_path = get_output_path();
     auto outfile_or_error = Core::DeprecatedFile::open(output_path, Core::OpenMode::WriteOnly);
     auto outputfile = outfile_or_error.release_value();
     for (auto line : file->lines()) {
@@ -89,5 +103,5 @@ TEST_CASE(file_lines_range)
     file->close();
     outputfile->close();
     VERIFY(files_have_same_contents(path, output_path));
-    unlink(output_path);
+    unlink(output_path.characters());
 }

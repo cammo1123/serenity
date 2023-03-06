@@ -6,11 +6,16 @@
  */
 
 #include <AK/ByteBuffer.h>
+#include <AK/Platform.h>
 #include <LibCore/IODevice.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/select.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/select.h>
+#else
+#    include <AK/Windows.h>
+#endif
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -36,7 +41,11 @@ int IODevice::read(u8* buffer, int length)
 
 ByteBuffer IODevice::read(size_t max_size)
 {
+#if !defined(AK_OS_WINDOWS)
     if (m_fd < 0)
+#else
+    if (m_handle == INVALID_HANDLE_VALUE)
+#endif
         return {};
     if (!max_size)
         return {};
@@ -59,6 +68,7 @@ ByteBuffer IODevice::read(size_t max_size)
     return buffer;
 }
 
+#if !defined(AK_OS_WINDOWS)
 bool IODevice::can_read_from_fd() const
 {
     // FIXME: Can we somehow remove this once Core::Socket is implemented using non-blocking sockets?
@@ -70,7 +80,7 @@ bool IODevice::can_read_from_fd() const
     };
 
     for (;;) {
-        if (select(m_fd + 1, &rfds, nullptr, nullptr, &timeout) < 0) {
+        if (::select(m_fd + 1, &rfds, nullptr, nullptr, &timeout) < 0) {
             if (errno == EINTR)
                 continue;
             perror("IODevice::can_read_from_fd: select");
@@ -80,7 +90,14 @@ bool IODevice::can_read_from_fd() const
     }
     return FD_ISSET(m_fd, &rfds);
 }
-
+#else
+bool IODevice::can_read_from_handle() const
+{
+    if (m_handle == INVALID_HANDLE_VALUE)
+        return false;
+    return WaitForSingleObject(m_handle, 0) == WAIT_OBJECT_0;
+}
+#endif
 bool IODevice::can_read_line() const
 {
     if (m_eof && !m_buffered_data.is_empty())
@@ -89,8 +106,13 @@ bool IODevice::can_read_line() const
     if (m_buffered_data.contains_slow('\n'))
         return true;
 
+#if !defined(AK_OS_WINDOWS)
     if (!can_read_from_fd())
         return false;
+#else
+    if (!can_read_from_handle())
+        return false;
+#endif
 
     while (true) {
         // Populate buffer until a newline is found or we reach EOF.
@@ -112,11 +134,25 @@ bool IODevice::can_read_line() const
 
 bool IODevice::can_read() const
 {
+#if !defined(AK_OS_WINDOWS)
     return !m_buffered_data.is_empty() || can_read_from_fd();
+#else
+    return !m_buffered_data.is_empty() || can_read_from_handle();
+#endif
+}
+
+bool IODevice::can_read_only_from_buffer() const
+{
+#if !defined(AK_OS_WINDOWS)
+    return !m_buffered_data.is_empty() && !can_read_from_fd();
+#else
+    return !m_buffered_data.is_empty() && !can_read_from_handle();
+#endif
 }
 
 ByteBuffer IODevice::read_all()
 {
+#if !defined(AK_OS_WINDOWS)
     off_t file_size = 0;
     struct stat st;
     int rc = fstat(fd(), &st);
@@ -144,6 +180,28 @@ ByteBuffer IODevice::read_all()
         }
         data.append((u8 const*)read_buffer, nread);
     }
+#else
+    Vector<u8> data;
+
+    if (!m_buffered_data.is_empty()) {
+        data.append(m_buffered_data.data(), m_buffered_data.size());
+        m_buffered_data.clear();
+    }
+
+    while (true) {
+        char read_buffer[4096];
+        DWORD nread = 0;
+        if (!ReadFile(m_handle, read_buffer, sizeof(read_buffer), &nread, nullptr)) {
+            set_error(GetLastError());
+            break;
+        }
+        if (nread == 0) {
+            set_eof(true);
+            break;
+        }
+        data.append((u8 const*)read_buffer, nread);
+    }
+#endif
 
     auto result = ByteBuffer::copy(data);
     if (!result.is_error())
@@ -155,8 +213,13 @@ ByteBuffer IODevice::read_all()
 
 DeprecatedString IODevice::read_line(size_t max_size)
 {
+#if !defined(AK_OS_WINDOWS)
     if (m_fd < 0)
         return {};
+#else
+    if (m_handle == INVALID_HANDLE_VALUE)
+        return {};
+#endif
     if (!max_size)
         return {};
     if (!can_read_line())
@@ -193,6 +256,7 @@ DeprecatedString IODevice::read_line(size_t max_size)
 
 bool IODevice::populate_read_buffer(size_t size) const
 {
+#if !defined(AK_OS_WINDOWS)
     if (m_fd < 0)
         return false;
     if (!size)
@@ -217,10 +281,40 @@ bool IODevice::populate_read_buffer(size_t size) const
     }
     m_buffered_data.append(buffer.data(), nread);
     return true;
+#else
+    if (m_handle == INVALID_HANDLE_VALUE)
+        return false;
+    if (!size)
+        return false;
+
+    auto buffer_result = ByteBuffer::create_uninitialized(size);
+    if (buffer_result.is_error()) {
+        dbgln("IODevice::populate_read_buffer: Not enough memory to allocate a buffer of {} bytes", size);
+        return {};
+    }
+
+    auto buffer = buffer_result.release_value();
+    auto* buffer_ptr = (char*)buffer.data();
+
+    DWORD nread = 0;
+    if (!ReadFile(m_handle, buffer_ptr, size, &nread, nullptr)) {
+        set_error(GetLastError());
+        return false;
+    }
+
+    if (nread == 0) {
+        set_eof(true);
+        return false;
+    }
+
+    m_buffered_data.append(buffer.data(), nread);
+    return true;
+#endif
 }
 
 bool IODevice::close()
 {
+#if !defined(AK_OS_WINDOWS)
     if (fd() < 0 || m_mode == OpenMode::NotOpen)
         return false;
     int rc = ::close(fd());
@@ -230,6 +324,17 @@ bool IODevice::close()
     }
     set_fd(-1);
     set_mode(OpenMode::NotOpen);
+#else
+    if (m_handle == INVALID_HANDLE_VALUE || m_mode == OpenMode::NotOpen)
+        return false;
+    int rc = CloseHandle(m_handle);
+    if (!rc) {
+        set_error(GetLastError());
+        return false;
+    }
+    m_handle = INVALID_HANDLE_VALUE;
+    set_mode(OpenMode::NotOpen);
+#endif
     return true;
 }
 
@@ -248,6 +353,7 @@ bool IODevice::seek(i64 offset, SeekMode mode, off_t* pos)
         m = SEEK_END;
         break;
     }
+#if !defined(AK_OS_WINDOWS)
     off_t rc = lseek(m_fd, offset, m);
     if (rc < 0) {
         set_error(errno);
@@ -255,6 +361,18 @@ bool IODevice::seek(i64 offset, SeekMode mode, off_t* pos)
             *pos = -1;
         return false;
     }
+#else
+    LARGE_INTEGER li;
+    li.QuadPart = offset;
+    li.LowPart = SetFilePointer(m_handle, li.LowPart, &li.HighPart, m);
+    if (li.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR) {
+        set_error(GetLastError());
+        if (pos)
+            *pos = -1;
+        return false;
+    }
+    off_t rc = li.QuadPart;
+#endif
     m_buffered_data.clear();
     m_eof = false;
     if (pos)
@@ -264,26 +382,45 @@ bool IODevice::seek(i64 offset, SeekMode mode, off_t* pos)
 
 bool IODevice::truncate(off_t size)
 {
+#if defined(AK_OS_WINDOWS)
+    if (!SetFilePointer(m_handle, size, nullptr, FILE_BEGIN)) {
+        set_error(GetLastError());
+        return false;
+    }
+#else
     int rc = ftruncate(m_fd, size);
     if (rc < 0) {
         set_error(errno);
         return false;
     }
+#endif
     return true;
 }
 
 bool IODevice::write(u8 const* data, int size)
 {
+#if !defined(AK_OS_WINDOWS)
+    dbgln("IODevice::write: fd={}, size={}", m_fd, size);
     int rc = ::write(m_fd, data, size);
     if (rc < 0) {
         set_error(errno);
         perror("IODevice::write: write");
         return false;
     }
+#else
+    dbgln("IODevice::write: handle={}, size={}", m_handle, size);
+    int rc = WriteFile(m_handle, data, size, nullptr, nullptr);
+    if (!rc) {
+        set_error(GetLastError());
+        perror("IODevice::write: WriteFile");
+        return false;
+    }
+#endif
     return rc == size;
 }
 
-void IODevice::set_fd(int fd)
+#if !defined(AK_OS_WINDOWS)
+void IODevice::set_fd(SOCKET fd)
 {
     if (m_fd == fd)
         return;
@@ -291,6 +428,16 @@ void IODevice::set_fd(int fd)
     m_fd = fd;
     did_update_fd(fd);
 }
+#else
+void IODevice::set_handle(HANDLE handle)
+{
+    if (m_handle == handle)
+        return;
+
+    m_handle = handle;
+    did_update_handle(handle);
+}
+#endif
 
 bool IODevice::write(StringView v)
 {
@@ -319,5 +466,4 @@ LineIterator& LineIterator::operator++()
 
 LineIterator LineRange::begin() { return m_device.line_begin(); }
 LineIterator LineRange::end() { return m_device.line_end(); }
-
 }

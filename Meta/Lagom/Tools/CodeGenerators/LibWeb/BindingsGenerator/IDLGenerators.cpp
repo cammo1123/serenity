@@ -208,6 +208,7 @@ static void generate_include_for(auto& generator, auto& path)
 {
     auto forked_generator = generator.fork();
     auto path_string = path;
+#if !defined(AK_OS_WINDOWS)
     for (auto& search_path : s_header_search_paths) {
         if (!path.starts_with(search_path))
             continue;
@@ -218,6 +219,9 @@ static void generate_include_for(auto& generator, auto& path)
 
     LexicalPath include_path { path_string };
     forked_generator.set("include.path", DeprecatedString::formatted("{}/{}.h", include_path.dirname(), include_path.title()));
+#else
+	forked_generator.set("include.path", path_string.replace(".idl"sv, ".h"sv, ReplaceMode::All));
+#endif
     forked_generator.append(R"~~~(
 #include <@include.path@>
 )~~~");

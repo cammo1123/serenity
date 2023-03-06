@@ -1,40 +1,52 @@
 set(SOURCES
-    AnonymousBuffer.cpp
     ArgsParser.cpp
     Command.cpp
     ConfigFile.cpp
     DateTime.cpp
-    DeprecatedFile.cpp
     Directory.cpp
     DirectoryEntry.cpp
     DirIterator.cpp
     ElapsedTimer.cpp
     Event.cpp
     EventLoop.cpp
-    File.cpp
     IODevice.cpp
-    LockFile.cpp
     MappedFile.cpp
     MimeData.cpp
     NetworkJob.cpp
     Notifier.cpp
     Object.cpp
-    Process.cpp
-    ProcessStatisticsReader.cpp
     Property.cpp
     SecretString.cpp
     SessionManagement.cpp
-    Socket.cpp
-    SOCKSProxyClient.cpp
     StandardPaths.cpp
-    System.cpp
     SystemServerTakeover.cpp
     TCPServer.cpp
-    TempFile.cpp
     Timer.cpp
-    UDPServer.cpp
     Version.cpp
 )
+if (NOT WIN32)
+    list(APPEND SOURCES
+        AnonymousBuffer.cpp
+        DeprecatedFile.cpp
+        File.cpp
+        LockFile.cpp
+        Process.cpp
+        ProcessStatisticsReader.cpp
+        Socket.cpp
+        SOCKSProxyClient.cpp
+        System.cpp
+        TempFile.cpp
+        UDPServer.cpp
+    )
+else()
+	list(APPEND SOURCES
+		Windows/AnonymousBuffer.cpp
+		Windows/System.cpp
+		Windows/Socket.cpp
+		Windows/DeprecatedFile.cpp	    
+		Windows/File.cpp
+	)
+endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)
     list(APPEND SOURCES
         Account.cpp
@@ -58,6 +70,10 @@ endif()
 
 serenity_lib(LibCore core)
 target_link_libraries(LibCore PRIVATE LibCrypt LibSystem)
+
+if (WIN32)
+	target_link_libraries(LibCore PRIVATE ws2_32)
+endif ()
 
 if (APPLE)
     target_link_libraries(LibCore PUBLIC "-framework CoreFoundation")

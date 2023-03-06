@@ -20,7 +20,9 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
+#if !defined(AK_OS_WINDOWS)
 #include <sys/socket.h>
+#endif
 #include <sys/types.h>
 #include <unistd.h>
 
