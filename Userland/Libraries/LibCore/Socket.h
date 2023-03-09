@@ -80,8 +80,10 @@ protected:
     int default_flags() const
     {
         int flags = 0;
+#ifdef MSG_NOSIGNAL
         if (m_prevent_sigpipe)
             flags |= MSG_NOSIGNAL;
+#endif
         return flags;
     }
 

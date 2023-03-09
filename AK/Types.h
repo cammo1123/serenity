@@ -68,6 +68,9 @@ using __ptrdiff_t = __PTRDIFF_TYPE__;
 #    if defined(AK_OS_WINDOWS)
 using ssize_t = AK::Detail::MakeSigned<size_t>;
 using mode_t = unsigned short;
+using gid_t = unsigned int;
+using uid_t = unsigned int;
+using sockaddr_un = struct sockaddr;
 #    endif
 #endif
 

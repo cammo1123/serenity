@@ -21,6 +21,10 @@
 #include <LibJS/Runtime/Value.h>
 #include <LibJS/Runtime/ValueTraits.h>
 
+#if defined(AK_OS_WINDOWS)
+#    undef Yield
+#endif
+
 namespace JS::Bytecode::Op {
 
 class Load final : public Instruction {

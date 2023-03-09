@@ -31,8 +31,10 @@
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/socket.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/select.h>
+#    include <sys/socket.h>
+#endif
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -80,13 +82,18 @@ thread_local bool EventLoop::s_wake_pipe_initialized { false };
 void EventLoop::initialize_wake_pipes()
 {
     if (!s_wake_pipe_initialized) {
-#if defined(SOCK_NONBLOCK)
+#if !defined(AK_OS_WINDOWS)
+#    if defined(SOCK_NONBLOCK)
         int rc = pipe2(s_wake_pipe_fds, O_CLOEXEC);
-#else
+#    else
         int rc = pipe(s_wake_pipe_fds);
         fcntl(s_wake_pipe_fds[0], F_SETFD, FD_CLOEXEC);
         fcntl(s_wake_pipe_fds[1], F_SETFD, FD_CLOEXEC);
-
+#    endif
+#else
+        int rc = _pipe(s_wake_pipe_fds, 0, O_BINARY);
+        ioctlsocket(s_wake_pipe_fds[0], FIONBIO, 0);
+        // NOTE: Windows doesn't set O_CLOEXEC, so we have to do it manually
 #endif
         VERIFY(rc == 0);
         s_wake_pipe_initialized = true;
@@ -615,11 +622,18 @@ void EventLoop::handle_signal(int signo)
     // is a window between fork() and exec() where a signal delivered
     // to our fork could be inadvertently routed to the parent process!
     if (getpid() == s_pid) {
+#if !defined(AK_OS_WINDOWS)
         int nwritten = write(s_wake_pipe_fds[1], &signo, sizeof(signo));
         if (nwritten < 0) {
             perror("EventLoop::register_signal: write");
             VERIFY_NOT_REACHED();
         }
+#else
+        DWORD nwritten;
+        do {
+            WriteFile((HANDLE)_get_osfhandle(s_wake_pipe_fds[1]), &signo, sizeof(signo), &nwritten, nullptr);
+        } while (nwritten == 0 && GetLastError() == ERROR_IO_PENDING);
+#endif
     } else {
         // We're a fork who received a signal, reset s_pid
         s_pid = 0;
@@ -690,8 +704,8 @@ retry:
     FD_ZERO(&rfds);
     FD_ZERO(&wfds);
 
-    int max_fd = 0;
-    auto add_fd_to_set = [&max_fd](int fd, fd_set& set) {
+    SOCKET max_fd = 0;
+    auto add_fd_to_set = [&max_fd](SOCKET fd, fd_set& set) {
         FD_SET(fd, &set);
         if (fd > max_fd)
             max_fd = fd;
@@ -754,15 +768,28 @@ try_select_again:
     // Handle signals and see whether we need to handle events as well.
     if (FD_ISSET(s_wake_pipe_fds[0], &rfds)) {
         int wake_events[8];
-        ssize_t nread;
         // We might receive another signal while read()ing here. The signal will go to the handle_signal properly,
         // but we get interrupted. Therefore, just retry while we were interrupted.
+#if !defined(AK_OS_WINDOWS)
+        ssize_t nread;
         do {
             errno = 0;
             nread = read(s_wake_pipe_fds[0], wake_events, sizeof(wake_events));
             if (nread == 0)
                 break;
         } while (nread < 0 && errno == EINTR);
+#else
+        DWORD nread;
+
+        do {
+            PeekNamedPipe((HANDLE)_get_osfhandle(s_wake_pipe_fds[0]), nullptr, 0, nullptr, &nread, nullptr);
+            if (nread > 0)
+                ReadFile((HANDLE)_get_osfhandle(s_wake_pipe_fds[0]), wake_events, sizeof(wake_events), &nread, nullptr);
+
+            if (nread == 0)
+                break;
+        } while (nread == 0 && GetLastError() == ERROR_MORE_DATA);
+#endif
         if (nread < 0) {
             perror("Core::EventLoop::wait_for_event: read from wake pipe");
             VERIFY_NOT_REACHED();
@@ -921,5 +948,4 @@ EventLoop::QueuedEvent::QueuedEvent(QueuedEvent&& other)
     , event(move(other.event))
 {
 }
-
 }

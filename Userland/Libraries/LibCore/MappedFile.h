@@ -11,6 +11,7 @@
 #include <AK/NonnullRefPtr.h>
 #include <AK/RefCounted.h>
 #include <LibCore/Forward.h>
+#include <windows.h>
 
 namespace Core {
 
@@ -21,7 +22,12 @@ class MappedFile : public RefCounted<MappedFile> {
 public:
     static ErrorOr<NonnullRefPtr<MappedFile>> map(StringView path);
     static ErrorOr<NonnullRefPtr<MappedFile>> map_from_file(NonnullOwnPtr<Core::File>, StringView path);
+
+#if !defined(AK_OS_WINDOWS)
     static ErrorOr<NonnullRefPtr<MappedFile>> map_from_fd_and_close(int fd, StringView path);
+#else
+    static ErrorOr<NonnullRefPtr<MappedFile>> map_from_handle_and_close(HANDLE handle, StringView path);
+#endif
     ~MappedFile();
 
     void* data() { return m_data; }

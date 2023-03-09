@@ -83,10 +83,12 @@ int File::open_mode_to_options(OpenMode mode)
         flags |= O_TRUNC;
     if (has_flag(mode, OpenMode::MustBeNew))
         flags |= O_EXCL;
+#if !defined(AK_OS_WINDOWS)
     if (!has_flag(mode, OpenMode::KeepOnExec))
         flags |= O_CLOEXEC;
     if (!has_flag(mode, OpenMode::Nonblocking))
         flags |= O_NONBLOCK;
+#endif
     return flags;
 }
 

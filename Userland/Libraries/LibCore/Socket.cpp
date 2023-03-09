@@ -18,7 +18,7 @@ ErrorOr<int> Socket::create_fd(SocketDomain domain, SocketType type)
         socket_domain = AF_INET;
         break;
     case SocketDomain::Local:
-        socket_domain = AF_LOCAL;
+        socket_domain = AF_UNIX;
         break;
     default:
         VERIFY_NOT_REACHED();
@@ -39,6 +39,9 @@ ErrorOr<int> Socket::create_fd(SocketDomain domain, SocketType type)
     // Let's have a safe default of CLOEXEC. :^)
 #ifdef SOCK_CLOEXEC
     return System::socket(socket_domain, socket_type | SOCK_CLOEXEC, 0);
+#elif defined(AK_OS_WINDOWS)
+    auto fd = TRY(System::socket(socket_domain, socket_type, 0));
+    return fd;
 #else
     auto fd = TRY(System::socket(socket_domain, socket_type, 0));
     TRY(System::fcntl(fd, F_SETFD, FD_CLOEXEC));

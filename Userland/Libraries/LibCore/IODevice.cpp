@@ -10,7 +10,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -61,6 +60,7 @@ ByteBuffer IODevice::read(size_t max_size)
 
 bool IODevice::can_read_from_fd() const
 {
+#if !defined(AK_OS_WINDOWS)
     // FIXME: Can we somehow remove this once Core::Socket is implemented using non-blocking sockets?
     fd_set rfds {};
     FD_ZERO(&rfds);
@@ -79,6 +79,9 @@ bool IODevice::can_read_from_fd() const
         break;
     }
     return FD_ISSET(m_fd, &rfds);
+#else
+    return PeekNamedPipe((HANDLE)_get_osfhandle(m_fd), nullptr, 0, nullptr, nullptr, nullptr) == 0;
+#endif
 }
 
 bool IODevice::can_read_line() const
@@ -133,7 +136,15 @@ ByteBuffer IODevice::read_all()
 
     while (true) {
         char read_buffer[4096];
+#    if !defined(AK_OS_WINDOWS)
         int nread = ::read(m_fd, read_buffer, sizeof(read_buffer));
+#    else
+        DWORD nread = 0;
+        PeekNamedPipe((HANDLE)_get_osfhandle(m_fd), nullptr, 0, nullptr, &nread, nullptr);
+        if (nread > 0) {
+            ReadFile((HANDLE)_get_osfhandle(m_fd), read_buffer, sizeof(read_buffer), &nread, nullptr);
+        }
+#    endif
         if (nread < 0) {
             set_error(errno);
             break;
@@ -206,7 +217,15 @@ bool IODevice::populate_read_buffer(size_t size) const
     auto buffer = buffer_result.release_value();
     auto* buffer_ptr = (char*)buffer.data();
 
+#    if !defined(AK_OS_WINDOWS)
     int nread = ::read(m_fd, buffer_ptr, size);
+#    else
+    DWORD nread = 0;
+    PeekNamedPipe((HANDLE)_get_osfhandle(m_fd), nullptr, 0, nullptr, &nread, nullptr);
+    if (nread > 0) {
+        ReadFile((HANDLE)_get_osfhandle(m_fd), buffer_ptr, size, &nread, nullptr);
+    }
+#    endif
     if (nread < 0) {
         set_error(errno);
         return false;
@@ -283,7 +302,7 @@ bool IODevice::write(u8 const* data, int size)
     return rc == size;
 }
 
-void IODevice::set_fd(int fd)
+void IODevice::set_fd(SOCKET fd)
 {
     if (m_fd == fd)
         return;

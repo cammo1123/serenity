@@ -38,6 +38,7 @@ using namespace Test::JS;
 
 static StringView g_program_name { "test-js"sv };
 
+#if !defined(AK_OS_WINDOWS)
 static void handle_sigabrt(int)
 {
     dbgln("{}: SIGABRT received, cleaning up.", g_program_name);
@@ -52,7 +53,10 @@ static void handle_sigabrt(int)
         exit(1);
     }
     abort();
+    dbgln("{}: SIGABRT received, but we can't clean up on Windows.", g_program_name);
+    VERIFY_NOT_REACHED();
 }
+#endif
 
 int main(int argc, char** argv)
 {
@@ -66,6 +70,7 @@ int main(int argc, char** argv)
     auto program_name = LexicalPath::basename(argv[0]);
     g_program_name = program_name;
 
+#if !defined(AK_OS_WINDOWS)
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_flags = SA_NOCLDWAIT;
@@ -75,6 +80,7 @@ int main(int argc, char** argv)
         perror("sigaction");
         return 1;
     }
+#endif
 
 #ifdef SIGINFO
     signal(SIGINFO, [](int) {

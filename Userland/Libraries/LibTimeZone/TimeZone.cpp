@@ -13,6 +13,11 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#if defined(AK_OS_WINDOWS)
+#    include <windows.h>
+#    define flockfile(x) _lock_file(x)
+#    define funlockfile(x) _unlock_file(x)
+#endif
 
 namespace TimeZone {
 
@@ -104,6 +109,22 @@ StringView current_time_zone()
 
 #ifdef AK_OS_SERENITY
     return system_time_zone();
+#elif defined(AK_OS_WINDOWS)
+    TIME_ZONE_INFORMATION time_zone_information;
+    DWORD result = GetTimeZoneInformation(&time_zone_information);
+
+    if (result == TIME_ZONE_ID_INVALID)
+        return "UTC"sv;
+
+    char buffer[32];
+    WideCharToMultiByte(CP_UTF8, 0, time_zone_information.StandardName, -1, buffer, sizeof(buffer), nullptr, nullptr);
+    StringView time_zone { buffer, strlen(buffer) };
+
+    if (auto maybe_time_zone = canonicalize_time_zone(time_zone); maybe_time_zone.has_value())
+        return *maybe_time_zone;
+
+    dbgln_if(TIME_ZONE_DEBUG, "Could not determine time zone from Windows: {}", time_zone);
+    return "UTC"sv;
 #else
     static constexpr auto zoneinfo = "/zoneinfo/"sv;
     char buffer[PATH_MAX];

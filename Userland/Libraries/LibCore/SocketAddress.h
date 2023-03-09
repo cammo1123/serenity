@@ -7,12 +7,18 @@
 
 #pragma once
 
+#include "AK/Assertions.h"
+#include "AK/Format.h"
 #include <AK/IPv4Address.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <arpa/inet.h>
+#    include <netinet/in.h>
+#    include <sys/socket.h>
+#    include <sys/un.h>
+#else
+#    include <winsock2.h>
+#endif
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 
 namespace Core {
 
@@ -65,6 +71,10 @@ public:
 
     Optional<sockaddr_un> to_sockaddr_un() const
     {
+		#if defined(AK_OS_WINDOWS)
+		dbgln("SocketAddress::to_sockaddr_un() is not implemented on Windows");
+		VERIFY_NOT_REACHED()
+		#else
         VERIFY(type() == Type::Local);
         sockaddr_un address;
         address.sun_family = AF_LOCAL;
@@ -72,6 +82,7 @@ public:
         if (!fits)
             return {};
         return address;
+		#endif
     }
 
     sockaddr_in to_sockaddr_in() const
