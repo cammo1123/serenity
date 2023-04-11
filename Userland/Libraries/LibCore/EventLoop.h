@@ -21,8 +21,15 @@
 #include <LibCore/Event.h>
 #include <LibCore/Forward.h>
 #include <LibThreading/MutexProtected.h>
-#include <sys/time.h>
 #include <sys/types.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/time.h>
+#else
+#    include <io.h>
+#    include <process.h>
+typedef int pid_t;
+#    define getpid _getpid
+#endif
 
 namespace Core {
 
