@@ -67,6 +67,10 @@ endif()
 serenity_lib(LibCore core)
 target_link_libraries(LibCore PRIVATE LibCrypt LibSystem)
 
+if (WIN32)
+	target_link_libraries(LibCore PRIVATE ws2_32)
+endif ()
+
 if (APPLE)
     target_link_libraries(LibCore PUBLIC "-framework CoreFoundation")
     target_link_libraries(LibCore PUBLIC "-framework CoreServices")

@@ -11,6 +11,13 @@
 #include <AK/Forward.h>
 #include <AK/Stream.h>
 #include <LibCore/Object.h>
+#if defined(AK_OS_WINDOWS)
+#    include <WinSock2.h>
+#else
+#    include <sys/select.h>
+#    define SOCKET int
+#    define INVALID_SOCKET -1
+#endif
 
 namespace Core {
 
@@ -70,7 +77,7 @@ class IODevice : public Object {
 public:
     virtual ~IODevice() override = default;
 
-    int fd() const { return m_fd; }
+    SOCKET fd() const { return m_fd; }
     OpenMode mode() const { return m_mode; }
     bool is_open() const { return m_mode != OpenMode::NotOpen; }
     bool eof() const { return m_eof; }
@@ -111,7 +118,7 @@ public:
 protected:
     explicit IODevice(Object* parent = nullptr);
 
-    void set_fd(int);
+    void set_fd(SOCKET);
     void set_mode(OpenMode mode) { m_mode = mode; }
     void set_error(int error) const { m_error = error; }
     void set_eof(bool eof) const { m_eof = eof; }
@@ -122,7 +129,7 @@ private:
     bool populate_read_buffer(size_t size = 1024) const;
     bool can_read_from_fd() const;
 
-    int m_fd { -1 };
+    SOCKET m_fd { INVALID_SOCKET };
     OpenMode m_mode { OpenMode::NotOpen };
     mutable int m_error { 0 };
     mutable bool m_eof { false };
