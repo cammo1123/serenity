@@ -32,6 +32,14 @@
 #    include <termios.h>
 #    include <utime.h>
 #else
+// Windows doesn't define W_OK, but it's used in Core::System::access().
+// https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess?view=msvc-170#remarks
+#    if defined(AK_OS_WINDOWS)
+#        define W_OK 2
+#    endif
+#    if !defined(PATH_MAX)
+#        define PATH_MAX MAX_PATH
+#    endif
 #    include <WS2tcpip.h>
 #    include <WinSock2.h>
 #    include <io.h>

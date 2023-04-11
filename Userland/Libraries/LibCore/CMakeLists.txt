@@ -44,8 +44,9 @@ set(SOURCES
 else()
 	list(APPEND SOURCES
         DeprecatedFileWindows.cpp
-		AnonymousBufferWindows.cpp
+        AnonymousBufferWindows.cpp
         EventLoopImplementationWindows.cpp
+        SystemWindows.cpp
 	)
 endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)
