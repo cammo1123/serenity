@@ -12,20 +12,28 @@
 #include <AK/StringBuilder.h>
 #include <LibCore/SessionManagement.h>
 #include <LibCore/StandardPaths.h>
-#include <pwd.h>
 #include <stdlib.h>
-#include <unistd.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <pwd.h>
+#    include <unistd.h>
+#endif
 
 namespace Core {
 
 DeprecatedString StandardPaths::home_directory()
 {
+#if defined(AK_OS_WINDOWS)
+    auto* home_env = getenv("USERPROFILE");
+    DeprecatedString path { home_env, strlen(home_env) };
+#else
     if (auto* home_env = getenv("HOME"))
         return LexicalPath::canonicalized_path(home_env);
 
     auto* pwd = getpwuid(getuid());
     DeprecatedString path = pwd ? pwd->pw_dir : "/";
     endpwent();
+#endif
     return LexicalPath::canonicalized_path(path);
 }
 
@@ -55,11 +63,14 @@ DeprecatedString StandardPaths::downloads_directory()
 
 DeprecatedString StandardPaths::config_directory()
 {
+    StringBuilder builder;
+#ifdef AK_OS_WINDOWS
+#else
     if (auto* config_directory = getenv("XDG_CONFIG_HOME"))
         return LexicalPath::canonicalized_path(config_directory);
 
-    StringBuilder builder;
     builder.append(home_directory());
+#endif
 #if defined(AK_OS_MACOS)
     builder.append("/Library/Preferences"sv);
 #else
@@ -99,6 +110,8 @@ ErrorOr<DeprecatedString> StandardPaths::runtime_directory()
 #elif defined(AK_OS_MACOS)
     builder.append(home_directory());
     builder.append("/Library/Application Support"sv);
+#elif defined(AK_OS_WINDOWS)
+    builder.appendff("{}", getenv("TEMP"));
 #else
     auto uid = getuid();
     builder.appendff("/run/user/{}", uid);
@@ -109,7 +122,12 @@ ErrorOr<DeprecatedString> StandardPaths::runtime_directory()
 
 DeprecatedString StandardPaths::tempfile_directory()
 {
+#if defined(AK_OS_WINDOWS)
+    auto* temp = getenv("TEMP");
+    return DeprecatedString { temp, strlen(temp) };
+#else
     return "/tmp";
+#endif
 }
 
 ErrorOr<Vector<String>> StandardPaths::font_directories()
