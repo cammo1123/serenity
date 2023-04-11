@@ -26,6 +26,10 @@ public:
 
     [[nodiscard]] static Error from_errno(int code) { return Error(code); }
 
+#if defined(AK_OS_WINDOWS)
+    [[nodiscard]] static Error from_windows_error(int code);
+#endif
+
     // NOTE: For calling this method from within kernel code, we will simply print
     // the error message and return the errno code.
     // For calling this method from userspace programs, we will simply return from
