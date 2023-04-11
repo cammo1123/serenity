@@ -458,6 +458,11 @@ static ErrorOr<void> generate_time_zone_data_header(Core::BufferedFile& file, Ti
 
 #include <AK/Types.h>
 
+// Windows defines this macro, which breaks the generated code. So we undef it here.
+#ifdef IN
+#    undef IN
+#endif
+
 namespace TimeZone {
 )~~~");
 

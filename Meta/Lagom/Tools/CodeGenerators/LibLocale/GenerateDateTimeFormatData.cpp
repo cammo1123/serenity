@@ -1709,6 +1709,11 @@ static ErrorOr<void> generate_unicode_locale_header(Core::BufferedFile& file, CL
 
 #include <AK/Types.h>
 
+// Windows defines this macro, which breaks the generated code. So we undef it here.
+#ifdef IN
+#    undef IN
+#endif
+
 namespace Locale {
 )~~~");
 
