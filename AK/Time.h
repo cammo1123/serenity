@@ -23,7 +23,11 @@ class TimeManagement;
 }
 
 #else
-#    include <sys/time.h>
+#    if defined(AK_OS_WINDOWS)
+#        include <winsock2.h>
+#    else
+#        include <sys/time.h>
+#    endif
 #    include <time.h>
 #endif
 
