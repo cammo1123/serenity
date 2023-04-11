@@ -9,7 +9,6 @@ set(SOURCES
     Event.cpp
     EventLoop.cpp
     EventLoopImplementation.cpp
-    EventLoopImplementationUnix.cpp
     File.cpp
     LockFile.cpp
     MappedFile.cpp
@@ -26,11 +25,12 @@ set(SOURCES
     Timer.cpp
     Version.cpp
     )
-if (NOT WIN32)
+    if (NOT WIN32)
         list(APPEND SOURCES
         AnonymousBuffer.cpp
         Command.cpp
         DeprecatedFile.cpp
+        EventLoopImplementationUnix.cpp
         LockFile.cpp
         Process.cpp
         ProcessStatisticsReader.cpp
@@ -44,6 +44,7 @@ if (NOT WIN32)
 else()
 	list(APPEND SOURCES
 		AnonymousBufferWindows.cpp
+        EventLoopImplementationWindows.cpp
 	)
 endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)

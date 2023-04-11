@@ -37,7 +37,6 @@
 #    include <io.h>
 using sighandler_t = _crt_signal_t;
 #endif
-#include <utime.h>
 
 #ifdef AK_OS_SERENITY
 #    include <Kernel/API/Jail.h>
