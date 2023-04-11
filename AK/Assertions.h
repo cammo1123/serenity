@@ -11,7 +11,10 @@
 #else
 #    include <assert.h>
 extern "C" __attribute__((noreturn)) void ak_verification_failed(char const*);
-#    ifndef NDEBUG
+//   NOTE: assert() from the Windows CRT is not [[noreturn]].
+//         Perhaps we should add a __builtin_unreachable() to the false case of VERIFY?
+//   FIXME: Why are we deferring to LibC assert at all?
+#    if !defined(NDEBUG) && !defined(_WIN32)
 #        define VERIFY assert
 #    else
 #        define __stringify_helper(x) #x
