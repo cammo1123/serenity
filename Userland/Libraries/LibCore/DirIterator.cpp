@@ -9,24 +9,37 @@
 #include <LibCore/DirIterator.h>
 #include <errno.h>
 
+#if defined(AK_OS_WINDOWS)
+#    include <io.h>
+#endif
+
 namespace Core {
 
 DirIterator::DirIterator(DeprecatedString path, Flags flags)
     : m_path(move(path))
     , m_flags(flags)
 {
+#if !defined(AK_OS_WINDOWS)
     m_dir = opendir(m_path.characters());
     if (!m_dir) {
         m_error = Error::from_errno(errno);
     }
+#endif
 }
 
 DirIterator::~DirIterator()
 {
+#if !defined(AK_OS_WINDOWS)
     if (m_dir) {
         closedir(m_dir);
         m_dir = nullptr;
     }
+#else
+    if (m_dir != INVALID_HANDLE_VALUE) {
+        FindClose(m_dir);
+        m_dir = INVALID_HANDLE_VALUE;
+    }
+#endif
 }
 
 DirIterator::DirIterator(DirIterator&& other)
@@ -41,10 +54,26 @@ DirIterator::DirIterator(DirIterator&& other)
 
 bool DirIterator::advance_next()
 {
-    if (!m_dir)
-        return false;
 
     while (true) {
+#if defined(AK_OS_WINDOWS)
+        if (!initialized) {
+            initialized = true;
+            auto path = DeprecatedString::formatted("{}/*", m_path);
+            m_dir = FindFirstFile(path.characters(), &m_find_data);
+            if (m_dir == INVALID_HANDLE_VALUE) {
+                m_error = Error::from_windows_error(GetLastError());
+                return false;
+            }
+        } else {
+            if (!FindNextFile(m_dir, &m_find_data)) {
+                m_error = Error::from_windows_error(GetLastError());
+                return false;
+            }
+        }
+
+        m_next = DirectoryEntry::from_find_data(m_find_data);
+#else
         errno = 0;
         auto* de = readdir(m_dir);
         if (!de) {
@@ -55,6 +84,7 @@ bool DirIterator::advance_next()
 
         m_next = DirectoryEntry::from_dirent(*de);
 
+#endif
         if (m_next->name.is_empty())
             return false;
 
@@ -108,7 +138,14 @@ int DirIterator::fd() const
 {
     if (!m_dir)
         return -1;
+#if defined(AK_OS_WINDOWS)
+    auto handle = CreateFile(m_path.characters(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (handle == INVALID_HANDLE_VALUE)
+        return -1;
+    return _open_osfhandle((intptr_t)handle, 0);
+#else
     return dirfd(m_dir);
+#endif
 }
 
 }
