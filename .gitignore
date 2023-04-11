@@ -27,6 +27,7 @@ output/
 run-local.sh
 sync-local.sh
 .vim/
+.vs
 .exrc
 
 Userland/Libraries/LibWasm/Tests/Fixtures/SpecTests
