@@ -12,6 +12,12 @@
 #include <LibCore/DateTime.h>
 #include <errno.h>
 #include <time.h>
+#if defined(AK_OS_WINDOWS)
+#    define gmtime_r(src, dest) gmtime_s(dest, src)
+#    define localtime_r(src, dest) localtime_s(dest, src)
+#    define timegm _mkgmtime
+#    define tzname _tzname
+#endif
 
 namespace Core {
 
