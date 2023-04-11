@@ -9,8 +9,13 @@
 
 #include <AK/DeprecatedString.h>
 #include <LibCore/DirectoryEntry.h>
-#include <dirent.h>
 #include <string.h>
+
+#if defined(AK_OS_WINDOWS)
+#    include <windows.h>
+#else
+#    include <dirent.h>
+#endif
 
 namespace Core {
 
@@ -37,7 +42,13 @@ public:
     int fd() const;
 
 private:
+#if !defined(AK_OS_WINDOWS)
     DIR* m_dir = nullptr;
+#else
+    HANDLE m_dir = INVALID_HANDLE_VALUE;
+    WIN32_FIND_DATAA m_find_data;
+    bool initialized = false;
+#endif
     Optional<Error> m_error;
     Optional<DirectoryEntry> m_next;
     DeprecatedString m_path;
