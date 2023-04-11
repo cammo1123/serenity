@@ -13,6 +13,9 @@
 #include <AK/Time.h>
 #include <LibCore/Notifier.h>
 #include <LibCore/SocketAddress.h>
+#if defined(AK_OS_WINDOWS)
+typedef int pid_t;
+#endif
 
 namespace Core {
 
@@ -36,10 +39,12 @@ public:
     // will fail with EAGAIN when the data cannot be written without blocking
     // (due to the send buffer being full, for example).
     virtual ErrorOr<void> set_blocking(bool enabled) = 0;
+#if !defined(AK_OS_WINDOWS)
     // Sets the close-on-exec mode of the socket. If close-on-exec mode is
     // enabled, then the socket will be automatically closed by the kernel when
     // an exec call happens.
     virtual ErrorOr<void> set_close_on_exec(bool enabled) = 0;
+#endif
 
     /// Disables any listening mechanisms that this socket uses.
     /// Can be called with 'false' when `on_ready_to_read` notifications are no longer needed.
@@ -140,8 +145,10 @@ public:
     ErrorOr<bool> can_read_without_blocking(int timeout) const;
 
     ErrorOr<void> set_blocking(bool enabled);
-    ErrorOr<void> set_close_on_exec(bool enabled);
     ErrorOr<void> set_receive_timeout(Time timeout);
+#if !defined(AK_OS_WINDOWS)
+    ErrorOr<void> set_close_on_exec(bool enabled);
+#endif
 
     void setup_notifier();
     RefPtr<Core::Notifier> notifier() { return m_notifier; }
@@ -189,9 +196,17 @@ public:
             notifier->set_enabled(enabled);
     }
     ErrorOr<void> set_blocking(bool enabled) override { return m_helper.set_blocking(enabled); }
-    ErrorOr<void> set_close_on_exec(bool enabled) override { return m_helper.set_close_on_exec(enabled); }
+#if !defined(AK_OS_WINDOWS)
+    ErrorOr<void> set_close_on_exec(bool enabled) override
+    {
+        return m_helper.set_close_on_exec(enabled);
+    }
+#endif
 
-    virtual ~TCPSocket() override { close(); }
+    virtual ~TCPSocket() override
+    {
+        close();
+    }
 
 private:
     TCPSocket(PreventSIGPIPE prevent_sigpipe = PreventSIGPIPE::No)
@@ -263,9 +278,17 @@ public:
             notifier->set_enabled(enabled);
     }
     ErrorOr<void> set_blocking(bool enabled) override { return m_helper.set_blocking(enabled); }
-    ErrorOr<void> set_close_on_exec(bool enabled) override { return m_helper.set_close_on_exec(enabled); }
+#if !defined(AK_OS_WINDOWS)
+    ErrorOr<void> set_close_on_exec(bool enabled) override
+    {
+        return m_helper.set_close_on_exec(enabled);
+    }
+#endif
 
-    virtual ~UDPSocket() override { close(); }
+    virtual ~UDPSocket() override
+    {
+        close();
+    }
 
 private:
     UDPSocket(PreventSIGPIPE prevent_sigpipe = PreventSIGPIPE::No)
@@ -318,12 +341,17 @@ public:
     virtual ErrorOr<size_t> pending_bytes() const override { return m_helper.pending_bytes(); }
     virtual ErrorOr<bool> can_read_without_blocking(int timeout = 0) const override { return m_helper.can_read_without_blocking(timeout); }
     virtual ErrorOr<void> set_blocking(bool enabled) override { return m_helper.set_blocking(enabled); }
-    virtual ErrorOr<void> set_close_on_exec(bool enabled) override { return m_helper.set_close_on_exec(enabled); }
     virtual void set_notifications_enabled(bool enabled) override
     {
         if (auto notifier = m_helper.notifier())
             notifier->set_enabled(enabled);
     }
+#if !defined(AK_OS_WINDOWS)
+    virtual ErrorOr<void> set_close_on_exec(bool enabled) override
+    {
+        return m_helper.set_close_on_exec(enabled);
+    }
+#endif
 
     ErrorOr<int> receive_fd(int flags);
     ErrorOr<void> send_fd(int fd);
@@ -409,10 +437,18 @@ public:
     }
     virtual ErrorOr<bool> can_read_without_blocking(int timeout = 0) const override { return m_helper.buffered_data_size() > 0 || TRY(m_helper.stream().can_read_without_blocking(timeout)); }
     virtual ErrorOr<void> set_blocking(bool enabled) override { return m_helper.stream().set_blocking(enabled); }
-    virtual ErrorOr<void> set_close_on_exec(bool enabled) override { return m_helper.stream().set_close_on_exec(enabled); }
     virtual void set_notifications_enabled(bool enabled) override { m_helper.stream().set_notifications_enabled(enabled); }
+#if !defined(AK_OS_WINDOWS)
+    virtual ErrorOr<void> set_close_on_exec(bool enabled) override
+    {
+        return m_helper.stream().set_close_on_exec(enabled);
+    }
+#endif
 
-    virtual ErrorOr<StringView> read_line(Bytes buffer) override { return m_helper.read_line(move(buffer)); }
+    virtual ErrorOr<StringView> read_line(Bytes buffer) override
+    {
+        return m_helper.read_line(move(buffer));
+    }
     virtual ErrorOr<Bytes> read_until(Bytes buffer, StringView candidate) override { return m_helper.read_until(move(buffer), move(candidate)); }
     template<size_t N>
     ErrorOr<Bytes> read_until_any_of(Bytes buffer, Array<StringView, N> candidates) { return m_helper.read_until_any_of(move(buffer), move(candidates)); }
@@ -491,7 +527,12 @@ public:
     virtual ErrorOr<size_t> pending_bytes() const override { return m_socket.pending_bytes(); }
     virtual ErrorOr<bool> can_read_without_blocking(int timeout = 0) const override { return m_socket.can_read_without_blocking(timeout); }
     virtual ErrorOr<void> set_blocking(bool enabled) override { return m_socket.set_blocking(enabled); }
-    virtual ErrorOr<void> set_close_on_exec(bool enabled) override { return m_socket.set_close_on_exec(enabled); }
+#if !defined(AK_OS_WINDOWS)
+    virtual ErrorOr<void> set_close_on_exec(bool enabled) override
+    {
+        return m_socket.set_close_on_exec(enabled);
+    }
+#endif
 
 private:
     BasicReusableSocket(NonnullOwnPtr<T> socket)

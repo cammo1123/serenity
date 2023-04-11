@@ -18,7 +18,7 @@ ErrorOr<int> Socket::create_fd(SocketDomain domain, SocketType type)
         socket_domain = AF_INET;
         break;
     case SocketDomain::Local:
-        socket_domain = AF_LOCAL;
+        socket_domain = AF_UNIX;
         break;
     default:
         VERIFY_NOT_REACHED();
@@ -39,6 +39,9 @@ ErrorOr<int> Socket::create_fd(SocketDomain domain, SocketType type)
     // Let's have a safe default of CLOEXEC. :^)
 #ifdef SOCK_CLOEXEC
     return System::socket(socket_domain, socket_type | SOCK_CLOEXEC, 0);
+#elif defined(AK_OS_WINDOWS)
+    auto fd = TRY(System::socket(socket_domain, socket_type, 0));
+    return fd;
 #else
     auto fd = TRY(System::socket(socket_domain, socket_type, 0));
     TRY(System::fcntl(fd, F_SETFD, FD_CLOEXEC));
@@ -145,7 +148,11 @@ void PosixSocketHelper::close()
 
 ErrorOr<bool> PosixSocketHelper::can_read_without_blocking(int timeout) const
 {
+#if defined(AK_OS_WINDOWS)
+    struct pollfd the_fd = { .fd = static_cast<SOCKET>(m_fd), .events = POLLIN, .revents = 0 };
+#else
     struct pollfd the_fd = { .fd = m_fd, .events = POLLIN, .revents = 0 };
+#endif
 
     ErrorOr<int> result { 0 };
     do {
@@ -164,6 +171,7 @@ ErrorOr<void> PosixSocketHelper::set_blocking(bool enabled)
     return System::ioctl(m_fd, FIONBIO, &value);
 }
 
+#if !defined(AK_OS_WINDOWS)
 ErrorOr<void> PosixSocketHelper::set_close_on_exec(bool enabled)
 {
     int flags = TRY(System::fcntl(m_fd, F_GETFD));
@@ -176,6 +184,7 @@ ErrorOr<void> PosixSocketHelper::set_close_on_exec(bool enabled)
     TRY(System::fcntl(m_fd, F_SETFD, flags));
     return {};
 }
+#endif
 
 ErrorOr<void> PosixSocketHelper::set_receive_timeout(Time timeout)
 {
@@ -373,6 +382,9 @@ ErrorOr<pid_t> LocalSocket::peer_pid() const
 #elif defined(AK_OS_SOLARIS)
     ucred_t* creds = NULL;
     socklen_t creds_size = sizeof(creds);
+#elif defined(AK_OS_WINDOWS)
+    DWORD pid;
+    socklen_t pid_size = sizeof(pid);
 #else
     struct ucred creds = {};
     socklen_t creds_size = sizeof(creds);
@@ -390,6 +402,9 @@ ErrorOr<pid_t> LocalSocket::peer_pid() const
 #elif defined(AK_OS_SOLARIS)
     TRY(System::getsockopt(m_helper.fd(), SOL_SOCKET, SO_RECVUCRED, &creds, &creds_size));
     return ucred_getpid(creds);
+#elif defined(AK_OS_WINDOWS)
+    TRY(System::getsockopt(m_helper.fd(), SOL_SOCKET, SO_PROTOCOL_INFO, &pid, &pid_size));
+    return pid;
 #else
     TRY(System::getsockopt(m_helper.fd(), SOL_SOCKET, SO_PEERCRED, &creds, &creds_size));
     return creds.pid;
@@ -398,7 +413,13 @@ ErrorOr<pid_t> LocalSocket::peer_pid() const
 
 ErrorOr<Bytes> LocalSocket::read_without_waiting(Bytes buffer)
 {
+#if !defined(AK_OS_WINDOWS)
     return m_helper.read(buffer, MSG_DONTWAIT);
+#else
+    (void)buffer;
+    dbgln("LocalSocket::read_without_waiting() is not implemented on Windows");
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 Optional<int> LocalSocket::fd() const

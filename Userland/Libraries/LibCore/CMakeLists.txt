@@ -18,6 +18,7 @@ set(SOURCES
     Property.cpp
     SecretString.cpp
     StandardPaths.cpp
+    Socket.cpp
     SystemServerTakeover.cpp
     TCPServer.cpp
     Timer.cpp
@@ -31,7 +32,6 @@ if (NOT WIN32)
         LockFile.cpp
         Process.cpp
         ProcessStatisticsReader.cpp
-        Socket.cpp
         SessionManagement.cpp
         SOCKSProxyClient.cpp
         System.cpp
