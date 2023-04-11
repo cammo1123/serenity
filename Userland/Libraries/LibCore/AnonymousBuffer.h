@@ -13,23 +13,36 @@
 #include <AK/RefPtr.h>
 #include <AK/Types.h>
 #include <LibIPC/Forward.h>
+#if defined(AK_OS_WINDOWS)
+#    include <windows.h>
+#endif
 
 namespace Core {
 
 class AnonymousBufferImpl final : public RefCounted<AnonymousBufferImpl> {
 public:
+#if !defined(AK_OS_WINDOWS)
     static ErrorOr<NonnullRefPtr<AnonymousBufferImpl>> create(int fd, size_t);
-    ~AnonymousBufferImpl();
-
     int fd() const { return m_fd; }
+#else
+    static ErrorOr<NonnullRefPtr<AnonymousBufferImpl>> create(HANDLE file_handle, size_t);
+    HANDLE file_handle() const { return m_file_handle; }
+#endif
+    ~AnonymousBufferImpl();
     size_t size() const { return m_size; }
     void* data() { return m_data; }
     void const* data() const { return m_data; }
 
 private:
+#if !defined(AK_OS_WINDOWS)
     AnonymousBufferImpl(int fd, size_t, void*);
 
     int m_fd { -1 };
+#else
+    AnonymousBufferImpl(HANDLE file_handle, size_t, void*);
+
+    HANDLE m_file_handle { INVALID_HANDLE_VALUE };
+#endif
     size_t m_size { 0 };
     void* m_data { nullptr };
 };
@@ -37,13 +50,18 @@ private:
 class AnonymousBuffer {
 public:
     static ErrorOr<AnonymousBuffer> create_with_size(size_t);
+#if !defined(AK_OS_WINDOWS)
     static ErrorOr<AnonymousBuffer> create_from_anon_fd(int fd, size_t);
+    int fd() const { return m_impl ? m_impl->fd() : -1; }
+#else
+    static ErrorOr<AnonymousBuffer> create_from_anon_handle(HANDLE file_handle, size_t);
+    HANDLE file_handle() const { return m_impl ? m_impl->file_handle() : INVALID_HANDLE_VALUE; }
+#endif
 
     AnonymousBuffer() = default;
 
     bool is_valid() const { return m_impl; }
 
-    int fd() const { return m_impl ? m_impl->fd() : -1; }
     size_t size() const { return m_impl ? m_impl->size() : 0; }
 
     template<typename T>

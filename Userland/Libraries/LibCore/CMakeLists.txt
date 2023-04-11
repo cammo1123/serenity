@@ -38,6 +38,10 @@ if (NOT WIN32)
         TempFile.cpp
         UDPServer.cpp
     )
+else()
+	list(APPEND SOURCES
+		AnonymousBufferWindows.cpp
+	)
 endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)
     list(APPEND SOURCES
