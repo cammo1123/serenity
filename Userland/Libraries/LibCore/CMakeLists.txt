@@ -40,7 +40,8 @@ if (NOT WIN32)
     )
 else()
 	list(APPEND SOURCES
-		AnonymousBufferWindows.cpp
+        AnonymousBufferWindows.cpp
+        DeprecatedFileWindows.cpp	 
 	)
 endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)
