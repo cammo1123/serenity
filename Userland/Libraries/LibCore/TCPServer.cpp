@@ -18,6 +18,10 @@ ErrorOr<NonnullRefPtr<TCPServer>> TCPServer::try_create(Object* parent)
 {
 #ifdef SOCK_NONBLOCK
     int fd = TRY(Core::System::socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0));
+#elif defined(AK_OS_WINDOWS)
+    int fd = TRY(Core::System::socket(AF_INET, SOCK_STREAM, 0));
+    u_long mode = 1;
+    ioctlsocket(fd, FIONBIO, &mode);
 #else
     int fd = TRY(Core::System::socket(AF_INET, SOCK_STREAM, 0));
     int option = 1;
@@ -67,12 +71,18 @@ ErrorOr<void> TCPServer::listen(IPv4Address const& address, u16 port, AllowAddre
 
 ErrorOr<void> TCPServer::set_blocking(bool blocking)
 {
+#if !defined(AK_OS_WINDOWS)
     int flags = TRY(Core::System::fcntl(m_fd, F_GETFL, 0));
     if (blocking)
         TRY(Core::System::fcntl(m_fd, F_SETFL, flags & ~O_NONBLOCK));
     else
         TRY(Core::System::fcntl(m_fd, F_SETFL, flags | O_NONBLOCK));
     return {};
+#else
+    dbgln("TCPServer::set_blocking() not implemented on Windows");
+    (void)blocking;
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 ErrorOr<NonnullOwnPtr<TCPSocket>> TCPServer::accept()
@@ -80,7 +90,7 @@ ErrorOr<NonnullOwnPtr<TCPSocket>> TCPServer::accept()
     VERIFY(m_listening);
     sockaddr_in in;
     socklen_t in_size = sizeof(in);
-#ifndef AK_OS_MACOS
+#if !defined(AK_OS_MACOS) && !defined(AK_OS_WINDOWS)
     int accepted_fd = TRY(Core::System::accept4(m_fd, (sockaddr*)&in, &in_size, SOCK_NONBLOCK | SOCK_CLOEXEC));
 #else
     int accepted_fd = TRY(Core::System::accept(m_fd, (sockaddr*)&in, &in_size));
