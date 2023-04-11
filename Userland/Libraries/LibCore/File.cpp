@@ -8,7 +8,13 @@
 #include <LibCore/File.h>
 #include <LibCore/System.h>
 #include <fcntl.h>
-#include <unistd.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <unistd.h>
+#else
+#    define STDIN_FILENO _fileno(stdin)
+#    define STDOUT_FILENO _fileno(stdout)
+#    define STDERR_FILENO _fileno(stderr)
+#endif
 
 namespace Core {
 
@@ -83,10 +89,12 @@ int File::open_mode_to_options(OpenMode mode)
         flags |= O_TRUNC;
     if (has_flag(mode, OpenMode::MustBeNew))
         flags |= O_EXCL;
+#if !defined(AK_OS_WINDOWS)
     if (!has_flag(mode, OpenMode::KeepOnExec))
         flags |= O_CLOEXEC;
     if (!has_flag(mode, OpenMode::Nonblocking))
         flags |= O_NONBLOCK;
+#endif
     return flags;
 }
 
