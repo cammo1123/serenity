@@ -43,6 +43,7 @@ set(SOURCES
     )
 else()
 	list(APPEND SOURCES
+        DeprecatedFileWindows.cpp
 		AnonymousBufferWindows.cpp
         EventLoopImplementationWindows.cpp
 	)
