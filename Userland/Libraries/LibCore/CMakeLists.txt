@@ -1,10 +1,7 @@
 set(SOURCES
-    AnonymousBuffer.cpp
     ArgsParser.cpp
-    Command.cpp
     ConfigFile.cpp
     DateTime.cpp
-    DeprecatedFile.cpp
     Directory.cpp
     DirectoryEntry.cpp
     DirIterator.cpp
@@ -13,27 +10,35 @@ set(SOURCES
     EventLoop.cpp
     File.cpp
     IODevice.cpp
-    LockFile.cpp
     MappedFile.cpp
     MimeData.cpp
     NetworkJob.cpp
     Notifier.cpp
     Object.cpp
-    Process.cpp
-    ProcessStatisticsReader.cpp
     Property.cpp
     SecretString.cpp
-    SessionManagement.cpp
-    Socket.cpp
-    SOCKSProxyClient.cpp
     StandardPaths.cpp
-    System.cpp
     SystemServerTakeover.cpp
     TCPServer.cpp
     Timer.cpp
-    UDPServer.cpp
     Version.cpp
-)
+    )
+if (NOT WIN32)
+        list(APPEND SOURCES
+        AnonymousBuffer.cpp
+        Command.cpp
+        DeprecatedFile.cpp
+        LockFile.cpp
+        Process.cpp
+        ProcessStatisticsReader.cpp
+        Socket.cpp
+        SessionManagement.cpp
+        SOCKSProxyClient.cpp
+        System.cpp
+        TempFile.cpp
+        UDPServer.cpp
+    )
+endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)
     list(APPEND SOURCES
         Account.cpp
