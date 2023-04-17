@@ -11,6 +11,7 @@
 #include <LibCore/ArgsParser.h>
 #include <LibCore/DirIterator.h>
 #include <LibCore/Process.h>
+#include <LibFileSystem/FileSystem.h>
 #include <fcntl.h>
 #include <pthread.h>
 #include <serenity.h>
@@ -45,9 +46,11 @@ int main(int argc, char** argv, char** env)
 
     DeprecatedString executable_path;
     if (arguments[0].contains("/"sv))
-        executable_path = Core::DeprecatedFile::real_path_for(arguments[0]);
+        executable_path = FileSystem::real_path(arguments[0]).release_value_but_fixme_should_propagate_errors().to_deprecated_string();
+    else if (auto result = FileSystem::resolve_executable_from_environment(arguments[0]); !result.is_error())
+        executable_path = result.release_value().to_deprecated_string();
     else
-        executable_path = Core::DeprecatedFile::resolve_executable_from_environment(arguments[0]).value_or({});
+        executable_path = {};
     if (executable_path.is_empty()) {
         reportln("Cannot find executable for '{}'."sv, arguments[0]);
         return 1;
