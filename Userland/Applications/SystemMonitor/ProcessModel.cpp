@@ -10,7 +10,7 @@
 #include <AK/JsonValue.h>
 #include <AK/NonnullRefPtr.h>
 #include <AK/NumberFormat.h>
-#include <LibCore/DeprecatedFile.h>
+#include <LibCore/File.h>
 #include <LibCore/ProcessStatisticsReader.h>
 #include <LibGUI/FileIconProvider.h>
 #include <LibGUI/Icon.h>
@@ -31,9 +31,10 @@ ProcessModel::ProcessModel()
     VERIFY(!s_the);
     s_the = this;
 
-    auto file = Core::DeprecatedFile::construct("/sys/kernel/cpuinfo");
-    if (file->open(Core::OpenMode::ReadOnly)) {
-        auto buffer = file->read_all();
+    auto file_or_error = Core::File::open("/sys/kernel/cpuinfo"sv, Core::File::OpenMode::Read);
+    if (!file_or_error.is_error()) {
+        auto file = file_or_error.release_value();
+        auto buffer = file->read_until_eof().release_value_but_fixme_should_propagate_errors();
         auto json = JsonValue::from_string({ buffer });
         auto cpuinfo_array = json.value().as_array();
         cpuinfo_array.for_each([&](auto& value) {

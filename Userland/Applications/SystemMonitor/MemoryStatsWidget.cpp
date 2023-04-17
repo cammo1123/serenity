@@ -9,7 +9,7 @@
 #include "GraphWidget.h"
 #include <AK/JsonObject.h>
 #include <AK/NumberFormat.h>
-#include <LibCore/DeprecatedFile.h>
+#include <LibCore/File.h>
 #include <LibCore/Object.h>
 #include <LibGUI/BoxLayout.h>
 #include <LibGUI/Label.h>
@@ -102,13 +102,19 @@ static inline u64 page_count_to_bytes(size_t count)
 
 void MemoryStatsWidget::refresh()
 {
-    auto proc_memstat = Core::DeprecatedFile::construct("/sys/kernel/memstat");
-    if (!proc_memstat->open(Core::OpenMode::ReadOnly))
-        VERIFY_NOT_REACHED();
+    auto load_json = [&]() -> ErrorOr<JsonObject> {
+        auto proc_memstat = TRY(Core::File::open("/sys/kernel/memstat"sv, Core::File::OpenMode::Read));
+        auto file_contents = TRY(proc_memstat->read_until_eof());
+        auto json_result = TRY(JsonValue::from_string(file_contents));
+        return json_result.as_object();
+    };
 
-    auto file_contents = proc_memstat->read_all();
-    auto json_result = JsonValue::from_string(file_contents).release_value_but_fixme_should_propagate_errors();
-    auto const& json = json_result.as_object();
+    auto json_or_error = load_json();
+    if (json_or_error.is_error()) {
+        dbgln("MemoryStatsWidget: Failed to load /proc/memstat: {}", json_or_error.error());
+        return;
+    }
+    auto json = json_or_error.release_value();
 
     u32 kmalloc_allocated = json.get_u32("kmalloc_allocated"sv).value_or(0);
     u32 kmalloc_available = json.get_u32("kmalloc_available"sv).value_or(0);
