@@ -10,7 +10,6 @@
 #include <AK/LexicalPath.h>
 #include <AK/Optional.h>
 #include <AK/Platform.h>
-#include <LibCore/DeprecatedFile.h>
 #include <LibFileSystem/FileSystem.h>
 #include <LibRegex/Regex.h>
 #include <stdlib.h>
@@ -126,7 +125,10 @@ OwnPtr<DebugSession> DebugSession::exec_and_attach(DeprecatedString const& comma
     }
 
     // At this point, libraries should have been loaded
-    debug_session->update_loaded_libs();
+    if (auto result = debug_session->update_loaded_libs(); result.is_error()) {
+        dbgln("failed to update loaded libs: {}", result.error());
+        return {};
+    }
 
     return debug_session;
 }
@@ -146,7 +148,10 @@ OwnPtr<DebugSession> DebugSession::attach(pid_t pid, DeprecatedString source_roo
 
     auto debug_session = adopt_own(*new DebugSession(pid, source_root, move(on_initialization_progress)));
     // At this point, libraries should have been loaded
-    debug_session->update_loaded_libs();
+    if (auto result = debug_session->update_loaded_libs(); result.is_error()) {
+        dbgln("failed to update loaded libs: {}", result.error());
+        return {};
+    }
 
     return debug_session;
 }
@@ -444,14 +449,12 @@ Optional<DebugSession::InsertBreakpointAtSourcePositionResult> DebugSession::ins
     return InsertBreakpointAtSourcePositionResult { lib->name, address_and_source_position.value().file, address_and_source_position.value().line, address };
 }
 
-void DebugSession::update_loaded_libs()
+ErrorOr<void> DebugSession::update_loaded_libs()
 {
-    auto file = Core::DeprecatedFile::construct(DeprecatedString::formatted("/proc/{}/vm", m_debuggee_pid));
-    bool rc = file->open(Core::OpenMode::ReadOnly);
-    VERIFY(rc);
+    auto file = TRY(Core::File::open(TRY(String::formatted("/proc/{}/vm", m_debuggee_pid)), Core::File::OpenMode::Read));
+    auto file_contents = TRY(file->read_until_eof());
 
-    auto file_contents = file->read_all();
-    auto json = JsonValue::from_string(file_contents).release_value_but_fixme_should_propagate_errors();
+    auto json = TRY(JsonValue::from_string(file_contents));
 
     auto const& vm_entries = json.as_array();
     Regex<PosixExtended> segment_name_re("(.+): ");
@@ -509,6 +512,8 @@ void DebugSession::update_loaded_libs()
 
         return IterationDecision::Continue;
     });
+
+    return {};
 }
 
 void DebugSession::stop_debuggee()
