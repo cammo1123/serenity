@@ -6,9 +6,11 @@
  */
 
 #include <AK/HashMap.h>
+#include <AK/String.h>
 #include <AK/StringView.h>
 #include <AK/Vector.h>
 #include <LibCore/ArgsParser.h>
+#include <LibCore/File.h>
 #include <LibMain/Main.h>
 
 // Exit code is bitwise-or of these values:
@@ -27,42 +29,84 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     HashMap<u32, Vector<DeprecatedString>> inverse_hashes;
     bool had_errors = false;
     for (auto const& filename : ipc_files) {
-        auto file_or_error = Core::DeprecatedFile::open(filename, Core::OpenMode::ReadOnly);
+        auto file_or_error = Core::File::open(filename, Core::File::OpenMode::Read);
+
         if (file_or_error.is_error()) {
             warnln("Error: Cannot open '{}': {}", filename, file_or_error.error());
             had_errors = true;
             continue; // next file
         }
-        auto file = file_or_error.value();
-        DeprecatedString endpoint_name;
-        while (true) {
-            DeprecatedString line = file->read_line();
-            if (file->error() != 0 || line.is_null())
-                break;
-            if (!line.starts_with("endpoint "sv))
-                continue;
-            auto line_endpoint_name = line.substring("endpoint "sv.length());
-            if (!endpoint_name.is_null()) {
-                // Note: If there are three or more endpoints defined in a file, these errors will look a bit wonky.
-                // However, that's fine, because it shouldn't happen in the first place.
-                warnln("Error: Multiple endpoints in file '{}': Found {} and {}", filename, file->error());
-                had_errors = true;
-                continue; // next line
-            }
-            endpoint_name = line_endpoint_name;
-        }
-        if (file->error() != 0) {
-            warnln("Error: Failed to read '{}': {}", filename, file->error());
+        auto file = file_or_error.release_value();
+        Optional<String> endpoint_name;
+
+        auto buffer_or_error = file->read_until_eof();
+        if (buffer_or_error.is_error()) {
+            warnln("Error: Cannot read '{}': {}", filename, buffer_or_error.error());
             had_errors = true;
             continue; // next file
         }
-        if (endpoint_name.is_null()) {
+        auto buffer = buffer_or_error.release_value();
+
+        size_t length = 0;
+        while (true) {
+            StringBuilder builder;
+
+            if (length >= buffer.size())
+                break;
+
+            while (true) {
+                auto current = buffer.bytes()[length];
+                ++length;
+
+                if (current == '\n' || current == '\r')
+                    break;
+
+                builder.append((char)current);
+            }
+
+            auto line_or_error = builder.to_string();
+            if (line_or_error.is_error()) {
+                warnln("Error: Cannot convert line to string: {}", line_or_error.error());
+                had_errors = true;
+                continue; // next file
+            }
+            auto line = line_or_error.release_value();
+
+            if (!line.starts_with_bytes("endpoint "sv))
+                continue;
+
+            auto line_endpoint_name_or_error = line.substring_from_byte_offset("endpoint "sv.length());
+            if (line_endpoint_name_or_error.is_error()) {
+                warnln("Error: Cannot extract endpoint name from line: {}", line_endpoint_name_or_error.error());
+                had_errors = true;
+                continue; // next file
+            }
+            auto line_endpoint_name = line_endpoint_name_or_error.release_value();
+
+            if (endpoint_name.has_value()) {
+                // Note: If there are three or more endpoints defined in a file, these errors will look a bit wonky.
+                // However, that's fine, because it shouldn't happen in the first place.
+                warnln("Error: Multiple endpoints in file '{}': Found {} and {}", filename, endpoint_name.value(), line_endpoint_name);
+                had_errors = true;
+                continue; // next line
+            }
+
+            auto endpoint_name_or_error = String::from_utf8(line_endpoint_name);
+            if (endpoint_name_or_error.is_error()) {
+                warnln("Error: Cannot convert endpoint name to string: {}", endpoint_name_or_error.error());
+                had_errors = true;
+                continue; // next file
+            }
+            endpoint_name = endpoint_name_or_error.release_value();
+        }
+
+        if (!endpoint_name.has_value()) {
             // If this happens, this file probably needs to parse the endpoint name more carefully.
             warnln("Error: Could not detect endpoint name in file '{}'", filename);
             had_errors = true;
             continue; // next file
         }
-        u32 hash = endpoint_name.hash();
+        u32 hash = endpoint_name.value().hash();
         auto& files_with_hash = inverse_hashes.ensure(hash);
         files_with_hash.append(filename);
     }
