@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, Ben Wiederhake <BenWiederhake.GitHub@gmx.de>
+ * Copyright (c) 2023, Cameron Youell <cameronyouell@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -7,24 +8,25 @@
 #include <AK/HashMap.h>
 #include <AK/StringView.h>
 #include <AK/Vector.h>
-#include <LibCore/DeprecatedFile.h>
+#include <LibCore/ArgsParser.h>
+#include <LibMain/Main.h>
 
 // Exit code is bitwise-or of these values:
 static constexpr auto EXIT_COLLISION = 0x1;
 static constexpr auto EXIT_ERROR = 0x2;
 
-int main(int argc, char** argv)
+ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
-    if (argc < 3) {
-        warnln("Usage: {} path/to/some.ipc path/to/other.ipc [more ipc files ...]", argv[0]);
-        return EXIT_ERROR;
-    }
+    Vector<StringView> ipc_files;
+
+    Core::ArgsParser args_parser;
+    args_parser.add_positional_argument(ipc_files, "IPC files to check", "ipc_files", Core::ArgsParser::Required::Yes);
+    args_parser.parse(arguments);
 
     // Read files, compute their hashes, ignore collisions for now.
     HashMap<u32, Vector<DeprecatedString>> inverse_hashes;
     bool had_errors = false;
-    for (int file_index = 1; file_index < argc; ++file_index) {
-        DeprecatedString filename(argv[file_index]);
+    for (auto const& filename : ipc_files) {
         auto file_or_error = Core::DeprecatedFile::open(filename, Core::OpenMode::ReadOnly);
         if (file_or_error.is_error()) {
             warnln("Error: Cannot open '{}': {}", filename, file_or_error.error());
@@ -77,7 +79,7 @@ int main(int argc, char** argv)
         had_collisions = true;
     }
 
-    outln("Checked {} files, saw {} distinct magic numbers.", argc - 1, inverse_hashes.size());
+    outln("Checked {} files, saw {} distinct magic numbers.", ipc_files.size(), inverse_hashes.size());
     if (had_collisions)
         outln("Consider giving your new service a different name.");
 
