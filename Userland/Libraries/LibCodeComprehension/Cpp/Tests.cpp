@@ -8,7 +8,7 @@
 #include "../FileDB.h"
 #include "CppComprehensionEngine.h"
 #include <AK/LexicalPath.h>
-#include <LibCore/DeprecatedFile.h>
+#include <LibCore/File.h>
 #include <LibMain/Main.h>
 
 static bool s_some_test_failed = false;
@@ -77,9 +77,9 @@ int run_tests()
 
 static void add_file(FileDB& filedb, DeprecatedString const& name)
 {
-    auto file = Core::DeprecatedFile::open(LexicalPath::join(TESTS_ROOT_DIR, name).string(), Core::OpenMode::ReadOnly);
+    auto file = Core::File::open(LexicalPath::join(TESTS_ROOT_DIR, name).string(), Core::File::OpenMode::Read);
     VERIFY(!file.is_error());
-    filedb.add(name, DeprecatedString::copy(file.value()->read_all()));
+    filedb.add(name, DeprecatedString::copy(MUST(file.value()->read_until_eof())));
 }
 
 void test_complete_local_args()
