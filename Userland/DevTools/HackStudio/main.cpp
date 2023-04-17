@@ -11,7 +11,6 @@
 #include <AK/StringBuilder.h>
 #include <LibConfig/Client.h>
 #include <LibCore/ArgsParser.h>
-#include <LibCore/DeprecatedFile.h>
 #include <LibCore/System.h>
 #include <LibFileSystem/FileSystem.h>
 #include <LibGUI/Application.h>
@@ -35,7 +34,7 @@ static bool make_is_available();
 static ErrorOr<void> notify_make_not_available();
 static void update_path_environment_variable();
 static Optional<DeprecatedString> last_opened_project_path();
-static ErrorOr<NonnullRefPtr<HackStudioWidget>> create_hack_studio_widget(bool mode_coredump, DeprecatedString const& path, pid_t pid_to_debug);
+static ErrorOr<NonnullRefPtr<HackStudioWidget>> create_hack_studio_widget(bool mode_coredump, StringView path, pid_t pid_to_debug);
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
@@ -64,7 +63,10 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     args_parser.add_option(pid_to_debug, "Attach debugger to running process", "pid", 'p', "PID");
     args_parser.parse(arguments);
 
-    auto absolute_path_argument = Core::DeprecatedFile::real_path_for(path_argument);
+    DeprecatedString absolute_path_argument;
+    if (!path_argument.is_empty())
+        absolute_path_argument = TRY(FileSystem::real_path(path_argument)).to_deprecated_string();
+
     auto hack_studio_widget = TRY(create_hack_studio_widget(mode_coredump, absolute_path_argument, pid_to_debug));
     window->set_main_widget(hack_studio_widget);
     s_hack_studio_widget = hack_studio_widget;
@@ -211,9 +213,9 @@ bool semantic_syntax_highlighting_is_enabled()
 
 }
 
-static ErrorOr<NonnullRefPtr<HackStudioWidget>> create_hack_studio_widget(bool mode_coredump, DeprecatedString const& absolute_path_argument, pid_t pid_to_debug)
+static ErrorOr<NonnullRefPtr<HackStudioWidget>> create_hack_studio_widget(bool mode_coredump, StringView absolute_path_argument, pid_t pid_to_debug)
 {
-    auto project_path = Core::DeprecatedFile::real_path_for(".");
+    auto project_path = TRY(FileSystem::real_path("."sv)).to_deprecated_string();
     if (!mode_coredump) {
         if (!absolute_path_argument.is_null())
             project_path = absolute_path_argument;

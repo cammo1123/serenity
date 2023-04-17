@@ -9,8 +9,8 @@
 #include <AK/LexicalPath.h>
 #include <AK/StringBuilder.h>
 #include <LibCore/ConfigFile.h>
-#include <LibCore/DeprecatedFile.h>
 #include <LibCore/DirIterator.h>
+#include <LibCore/System.h>
 #include <LibFileSystem/FileSystem.h>
 #include <fcntl.h>
 #include <spawn.h>
@@ -62,27 +62,22 @@ RefPtr<ProjectTemplate> ProjectTemplate::load_from_manifest(DeprecatedString con
     return adopt_ref(*new ProjectTemplate(id, name, description, icon, priority));
 }
 
-Result<void, DeprecatedString> ProjectTemplate::create_project(DeprecatedString const& name, DeprecatedString const& path)
+ErrorOr<void> ProjectTemplate::create_project(StringView name, StringView path)
 {
     // Check if a file or directory already exists at the project path
     if (FileSystem::exists(path))
-        return DeprecatedString("File or directory already exists at specified location.");
+        return Error::from_string_view(TRY(String::formatted("A file or directory already exists at path '{}'", path)));
 
     dbgln("Creating project at path '{}' with name '{}'", path, name);
 
     // Verify that the template content directory exists. If it does, copy it's contents.
     // Otherwise, create an empty directory at the project path.
     if (FileSystem::is_directory(content_path())) {
-        auto result = Core::DeprecatedFile::copy_file_or_directory(path, content_path());
         dbgln("Copying {} -> {}", content_path(), path);
-        if (result.is_error())
-            return DeprecatedString::formatted("Failed to copy template contents. Error code: {}", static_cast<Error const&>(result.error()));
+        TRY(FileSystem::copy_file_or_directory(path, content_path()));
     } else {
         dbgln("No template content directory found for '{}', creating an empty directory for the project.", m_id);
-        int rc;
-        if ((rc = mkdir(path.characters(), 0755)) < 0) {
-            return DeprecatedString::formatted("Failed to mkdir empty project directory, error: {}, rc: {}.", strerror(errno), rc);
-        }
+        TRY(Core::System::mkdir(path, 0755));
     }
 
     // Check for an executable post-create script in $TEMPLATES_DIR/$ID.postcreate,
@@ -97,24 +92,17 @@ Result<void, DeprecatedString> ProjectTemplate::create_project(DeprecatedString 
         // Generate a namespace-safe project name (replace hyphens with underscores)
         auto namespace_safe = name.replace("-"sv, "_"sv, ReplaceMode::All);
 
-        pid_t child_pid;
-        char const* argv[] = { postcreate_script_path.characters(), name.characters(), path.characters(), namespace_safe.characters(), nullptr };
-
-        if ((errno = posix_spawn(&child_pid, postcreate_script_path.characters(), nullptr, nullptr, const_cast<char**>(argv), environ))) {
-            perror("posix_spawn");
-            return DeprecatedString("Failed to spawn project post-create script.");
-        }
+        char const* argv[] = { postcreate_script_path.characters(), name.characters_without_null_termination(), path.characters_without_null_termination(), namespace_safe.characters(), nullptr };
+        auto child_pid = TRY(Core::System::posix_spawn(postcreate_script_path, nullptr, nullptr, const_cast<char**>(argv), environ));
 
         // Command spawned, wait for exit.
-        int status;
-        if (waitpid(child_pid, &status, 0) < 0)
-            return DeprecatedString("Failed to spawn project post-create script.");
+        auto result = TRY(Core::System::waitpid(child_pid));
 
-        int child_error = WEXITSTATUS(status);
+        int child_error = WEXITSTATUS(result.status);
         dbgln("Post-create script exited with code {}", child_error);
 
         if (child_error != 0)
-            return DeprecatedString("Project post-creation script exited with non-zero error code.");
+            return Error::from_string_view(TRY(String::formatted("Post-create script exited with code {}", child_error)));
     }
 
     return {};

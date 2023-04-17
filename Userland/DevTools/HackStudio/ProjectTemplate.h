@@ -24,7 +24,7 @@ public:
 
     explicit ProjectTemplate(DeprecatedString const& id, DeprecatedString const& name, DeprecatedString const& description, const GUI::Icon& icon, int priority);
 
-    Result<void, DeprecatedString> create_project(DeprecatedString const& name, DeprecatedString const& path);
+    ErrorOr<void> create_project(StringView name, StringView path);
 
     DeprecatedString const& id() const { return m_id; }
     DeprecatedString const& name() const { return m_name; }
