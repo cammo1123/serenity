@@ -15,6 +15,9 @@
 #include <LibCore/SocketAddress.h>
 #if defined(AK_OS_WINDOWS)
 typedef int pid_t;
+
+// This is a cosmetic hack
+#define O_CLOEXEC 02000000
 #endif
 
 namespace Core {
@@ -39,12 +42,10 @@ public:
     // will fail with EAGAIN when the data cannot be written without blocking
     // (due to the send buffer being full, for example).
     virtual ErrorOr<void> set_blocking(bool enabled) = 0;
-#if !defined(AK_OS_WINDOWS)
     // Sets the close-on-exec mode of the socket. If close-on-exec mode is
     // enabled, then the socket will be automatically closed by the kernel when
     // an exec call happens.
     virtual ErrorOr<void> set_close_on_exec(bool enabled) = 0;
-#endif
 
     /// Disables any listening mechanisms that this socket uses.
     /// Can be called with 'false' when `on_ready_to_read` notifications are no longer needed.
@@ -85,8 +86,10 @@ protected:
     int default_flags() const
     {
         int flags = 0;
+#ifdef MSG_NOSIGNAL
         if (m_prevent_sigpipe)
             flags |= MSG_NOSIGNAL;
+#endif
         return flags;
     }
 
@@ -146,9 +149,7 @@ public:
 
     ErrorOr<void> set_blocking(bool enabled);
     ErrorOr<void> set_receive_timeout(Time timeout);
-#if !defined(AK_OS_WINDOWS)
     ErrorOr<void> set_close_on_exec(bool enabled);
-#endif
 
     void setup_notifier();
     RefPtr<Core::Notifier> notifier() { return m_notifier; }
@@ -196,12 +197,10 @@ public:
             notifier->set_enabled(enabled);
     }
     ErrorOr<void> set_blocking(bool enabled) override { return m_helper.set_blocking(enabled); }
-#if !defined(AK_OS_WINDOWS)
     ErrorOr<void> set_close_on_exec(bool enabled) override
     {
         return m_helper.set_close_on_exec(enabled);
     }
-#endif
 
     virtual ~TCPSocket() override
     {
@@ -278,12 +277,10 @@ public:
             notifier->set_enabled(enabled);
     }
     ErrorOr<void> set_blocking(bool enabled) override { return m_helper.set_blocking(enabled); }
-#if !defined(AK_OS_WINDOWS)
     ErrorOr<void> set_close_on_exec(bool enabled) override
     {
         return m_helper.set_close_on_exec(enabled);
     }
-#endif
 
     virtual ~UDPSocket() override
     {
@@ -346,16 +343,18 @@ public:
         if (auto notifier = m_helper.notifier())
             notifier->set_enabled(enabled);
     }
-#if !defined(AK_OS_WINDOWS)
     virtual ErrorOr<void> set_close_on_exec(bool enabled) override
     {
         return m_helper.set_close_on_exec(enabled);
     }
-#endif
 
     ErrorOr<int> receive_fd(int flags);
     ErrorOr<void> send_fd(int fd);
+#if !defined(AK_OS_WINDOWS)
     ErrorOr<pid_t> peer_pid() const;
+#else
+    ErrorOr<DWORD> peer_pid() const;
+#endif
     ErrorOr<Bytes> read_without_waiting(Bytes buffer);
 
     /// Release the fd associated with this LocalSocket. After the fd is
@@ -438,12 +437,10 @@ public:
     virtual ErrorOr<bool> can_read_without_blocking(int timeout = 0) const override { return m_helper.buffered_data_size() > 0 || TRY(m_helper.stream().can_read_without_blocking(timeout)); }
     virtual ErrorOr<void> set_blocking(bool enabled) override { return m_helper.stream().set_blocking(enabled); }
     virtual void set_notifications_enabled(bool enabled) override { m_helper.stream().set_notifications_enabled(enabled); }
-#if !defined(AK_OS_WINDOWS)
     virtual ErrorOr<void> set_close_on_exec(bool enabled) override
     {
         return m_helper.stream().set_close_on_exec(enabled);
     }
-#endif
 
     virtual ErrorOr<StringView> read_line(Bytes buffer) override
     {

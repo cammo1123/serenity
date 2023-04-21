@@ -9,7 +9,10 @@
 #include <LibThreading/BackgroundAction.h>
 #include <LibThreading/Mutex.h>
 #include <LibThreading/Thread.h>
+
+#if !defined(AK_OS_WINDOWS)
 #include <unistd.h>
+#endif
 
 static pthread_mutex_t s_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t s_condition = PTHREAD_COND_INITIALIZER;

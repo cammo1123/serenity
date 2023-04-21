@@ -79,8 +79,8 @@ ErrorOr<void> TCPServer::set_blocking(bool blocking)
         TRY(Core::System::fcntl(m_fd, F_SETFL, flags | O_NONBLOCK));
     return {};
 #else
-    dbgln("TCPServer::set_blocking() not implemented on Windows");
     (void)blocking;
+    dbgln("TCPServer::set_blocking() not implemented on Windows");
     VERIFY_NOT_REACHED();
 #endif
 }

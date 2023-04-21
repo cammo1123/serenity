@@ -5,9 +5,14 @@
  */
 
 #include <LibThreading/Thread.h>
-#include <pthread.h>
 #include <string.h>
+
+#if !defined(AK_OS_WINDOWS)
 #include <unistd.h>
+#include <pthread.h>
+#else
+#include <process.h>
+#endif
 
 namespace Threading {
 
@@ -35,28 +40,39 @@ Thread::~Thread()
 
 ErrorOr<void> Thread::set_priority(int priority)
 {
+#if !defined(AK_OS_WINDOWS)
     // MacOS has an extra __opaque field, so list initialization will not compile on MacOS Lagom.
     sched_param scheduling_parameters {};
     scheduling_parameters.sched_priority = priority;
     int result = pthread_setschedparam(m_tid, 0, &scheduling_parameters);
     if (result != 0)
         return Error::from_errno(result);
+#else
+    dbgln("Thread::set_priority({}) not supported yet", priority);
+    VERIFY_NOT_REACHED();
+#endif
     return {};
 }
 
 ErrorOr<int> Thread::get_priority() const
 {
+#if !defined(AK_OS_WINDOWS)
     sched_param scheduling_parameters {};
     int policy;
     int result = pthread_getschedparam(m_tid, &policy, &scheduling_parameters);
     if (result != 0)
         return Error::from_errno(result);
     return scheduling_parameters.sched_priority;
+#else
+    dbgln("Thread::get_priority() not supported yet");
+    VERIFY_NOT_REACHED();
+    return -1;
+#endif
 }
 
 DeprecatedString Thread::thread_name() const { return m_thread_name; }
 
-pthread_t Thread::tid() const { return m_tid; }
+ThreadID Thread::tid() const { return m_tid; }
 
 ThreadState Thread::state() const { return m_state; }
 
@@ -74,6 +90,7 @@ bool Threading::Thread::has_exited() const
     return state == ThreadState::Joined || state == ThreadState::Exited || state == ThreadState::DetachedExited;
 }
 
+#if !defined(AK_OS_WINDOWS)
 void Thread::start()
 {
     VERIFY(!is_started());
@@ -117,6 +134,35 @@ void Thread::start()
 #endif
     dbgln("Started {}", *this);
 }
+#else
+void Thread::start()
+{
+    VERIFY(!is_started());
+
+    // Set this first so that the other thread starts out seeing m_state == Running.
+    m_state = Threading::ThreadState::Running;
+    _beginthread( [](void* arg){
+        Thread* self = static_cast<Thread*>(arg);
+        auto exit_code = self->m_action();
+        auto expected = Threading::ThreadState::Running;
+        // This code might race with a call to detach().
+        if (!self->m_state.compare_exchange_strong(expected, Threading::ThreadState::Exited)) {
+            // If the original state was Detached, we need to set to DetachedExited instead.
+            if (expected == Threading::ThreadState::Detached) {
+                if (!self->m_state.compare_exchange_strong(expected, Threading::ThreadState::DetachedExited)) {
+                    dbgln("Thread logic bug: Found thread state {} while trying to set ExitedDetached state!", expected);
+                    VERIFY_NOT_REACHED();
+                }
+            } else {
+                dbgln("Thread logic bug: Found thread state {} while trying to set Exited state!", expected);
+                VERIFY_NOT_REACHED();
+            }
+        }
+        // TODO - how to propagate this outside this method/class?
+        dbgln("Thread exited with status {}", exit_code);
+    }, 0, static_cast<void*>(this) );
+}
+#endif
 
 void Thread::detach()
 {

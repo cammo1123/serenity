@@ -19,9 +19,12 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/socket.h>
 #include <sys/types.h>
+
+#if !defined(AK_OS_WINDOWS)
 #include <unistd.h>
+#include <sys/socket.h>
+#endif
 
 namespace IPC {
 

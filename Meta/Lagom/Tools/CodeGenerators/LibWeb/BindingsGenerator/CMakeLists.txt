@@ -4,4 +4,7 @@ set(SOURCES
 )
 
 lagom_tool(BindingsGenerator LIBS LibIDL LibMain)
-target_compile_options(BindingsGenerator PUBLIC -g)
+
+if (!MSVC)
+    target_compile_options(BindingsGenerator PUBLIC -g)
+endif()

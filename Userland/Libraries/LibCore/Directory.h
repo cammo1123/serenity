@@ -18,10 +18,10 @@
 #include <LibCore/DirectoryEntry.h>
 #include <LibCore/File.h>
 #include <sys/stat.h>
-#if defined(AK_OS_WINDOWS)
-#    include <windows.h>
-#else
+#if !defined(AK_OS_WINDOWS)
 #    include <dirent.h>
+#else
+#    include <windows.h>
 #endif
 
 namespace Core {
@@ -53,7 +53,6 @@ public:
     ErrorOr<void> for_each_entry(DirIterator::Flags, ForEachEntryCallback);
 #if !defined(AK_OS_WINDOWS)
     ErrorOr<void> chown(uid_t, gid_t);
-
     static ErrorOr<Directory> adopt_fd(int fd, LexicalPath);
     static ErrorOr<bool> is_valid_directory(int fd);
 #else

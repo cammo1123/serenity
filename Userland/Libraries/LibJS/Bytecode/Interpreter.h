@@ -122,6 +122,6 @@ private:
     InstructionStreamIterator* m_pc { nullptr };
 };
 
-LibJS_API extern bool g_dump_bytecode;
+LIBJS_API extern bool g_dump_bytecode;
 
 }

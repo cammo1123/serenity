@@ -8,7 +8,13 @@
 #include <LibCore/System.h>
 #include <LibIPC/Connection.h>
 #include <LibIPC/Stub.h>
+
+#if !defined(AK_OS_WINDOWS)
 #include <sys/select.h>
+#else
+// including so we have a definition for `sched_yield()`
+#include <AK/Singleton.h>
+#endif
 
 namespace IPC {
 

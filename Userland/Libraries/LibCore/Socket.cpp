@@ -8,6 +8,11 @@
 #include <LibCore/Socket.h>
 #include <LibCore/System.h>
 
+#if defined(AK_OS_WINDOWS)
+#include <io.h>
+#include <Handleapi.h>
+#endif
+
 namespace Core {
 
 ErrorOr<int> Socket::create_fd(SocketDomain domain, SocketType type)
@@ -51,6 +56,11 @@ ErrorOr<int> Socket::create_fd(SocketDomain domain, SocketType type)
 
 ErrorOr<IPv4Address> Socket::resolve_host(DeprecatedString const& host, SocketType type)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("Socket: resolve_host not implemented");
+    VERIFY_NOT_REACHED();
+#endif
+
     int socket_type;
     switch (type) {
     case SocketType::Stream:
@@ -97,6 +107,11 @@ ErrorOr<void> Socket::connect_local(int fd, DeprecatedString const& path)
 
 ErrorOr<void> Socket::connect_inet(int fd, SocketAddress const& address)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("Socket: resolve_host not implemented");
+    VERIFY_NOT_REACHED();
+#endif
+
     auto addr = address.to_sockaddr_in();
     return System::connect(fd, bit_cast<struct sockaddr*>(&addr), sizeof(addr));
 }
@@ -148,10 +163,10 @@ void PosixSocketHelper::close()
 
 ErrorOr<bool> PosixSocketHelper::can_read_without_blocking(int timeout) const
 {
-#if defined(AK_OS_WINDOWS)
-    struct pollfd the_fd = { .fd = static_cast<SOCKET>(m_fd), .events = POLLIN, .revents = 0 };
-#else
+#if !defined(AK_OS_WINDOWS)
     struct pollfd the_fd = { .fd = m_fd, .events = POLLIN, .revents = 0 };
+#else
+    struct pollfd the_fd = { .fd = static_cast<SOCKET>(m_fd), .events = POLLIN, .revents = 0 };
 #endif
 
     ErrorOr<int> result { 0 };
@@ -167,27 +182,42 @@ ErrorOr<bool> PosixSocketHelper::can_read_without_blocking(int timeout) const
 
 ErrorOr<void> PosixSocketHelper::set_blocking(bool enabled)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("PosixSocketHelper::set_blocking: resolve_host not implemented");
+    VERIFY_NOT_REACHED();
+#endif
+
     int value = enabled ? 0 : 1;
     return System::ioctl(m_fd, FIONBIO, &value);
 }
 
-#if !defined(AK_OS_WINDOWS)
 ErrorOr<void> PosixSocketHelper::set_close_on_exec(bool enabled)
 {
+#if defined(AK_OS_WINDOWS)
+    auto handle = _get_osfhandle(this->m_fd);
+    auto res = SetHandleInformation((HANDLE*)handle, HANDLE_FLAG_INHERIT, 
+        enabled ? HANDLE_FLAG_INHERIT : HANDLE_FLAG_PROTECT_FROM_CLOSE );
+    if (!res) {
+        return Error::from_string_view("SetHandleInformation() failed"sv);
+    }
+#else
     int flags = TRY(System::fcntl(m_fd, F_GETFD));
-
     if (enabled)
         flags |= FD_CLOEXEC;
     else
         flags &= ~FD_CLOEXEC;
-
     TRY(System::fcntl(m_fd, F_SETFD, flags));
+#endif
     return {};
 }
-#endif
 
 ErrorOr<void> PosixSocketHelper::set_receive_timeout(Time timeout)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("PosixSocketHelper::set_blocking: resolve_host not implemented");
+    VERIFY_NOT_REACHED();
+#endif
+
     auto timeout_spec = timeout.to_timespec();
     return System::setsockopt(m_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout_spec, sizeof(timeout_spec));
 }
@@ -200,6 +230,10 @@ void PosixSocketHelper::setup_notifier()
 
 ErrorOr<NonnullOwnPtr<TCPSocket>> TCPSocket::connect(DeprecatedString const& host, u16 port)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("PosixSocketHelper::set_blocking: resolve_host not implemented");
+    VERIFY_NOT_REACHED();
+#endif
     auto ip_address = TRY(resolve_host(host, SocketType::Stream));
     return connect(SocketAddress { ip_address, port });
 }
@@ -365,7 +399,11 @@ ErrorOr<void> LocalSocket::send_fd(int fd)
 #endif
 }
 
+#if !defined(AK_OS_WINDOWS)
 ErrorOr<pid_t> LocalSocket::peer_pid() const
+#else
+ErrorOr<DWORD> LocalSocket::peer_pid() const
+#endif
 {
 #ifdef AK_OS_MACOS
     pid_t pid;

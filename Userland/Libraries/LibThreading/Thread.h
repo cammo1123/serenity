@@ -13,9 +13,20 @@
 #include <AK/Function.h>
 #include <AK/Result.h>
 #include <LibCore/Object.h>
+
+#if !defined(AK_OS_WINDOWS)
 #include <pthread.h>
+#else
+#include <process.h>
+#endif
 
 namespace Threading {
+
+#if !defined(AK_OS_WINDOWS)
+using ThreadID = pthread_t;
+#else
+using ThreadID = unsigned long;
+#endif
 
 AK_TYPEDEF_DISTINCT_ORDERED_ID(intptr_t, ThreadError);
 
@@ -60,7 +71,7 @@ public:
     Result<T, ThreadError> join();
 
     DeprecatedString thread_name() const;
-    pthread_t tid() const;
+    ThreadID tid() const;
     ThreadState state() const;
     bool is_started() const;
     bool needs_to_be_joined() const;
@@ -69,7 +80,7 @@ public:
 private:
     explicit Thread(Function<intptr_t()> action, StringView thread_name = {});
     Function<intptr_t()> m_action;
-    pthread_t m_tid { 0 };
+    ThreadID m_tid { 0 };
     DeprecatedString m_thread_name;
     Atomic<ThreadState> m_state { ThreadState::Startable };
 };
@@ -78,7 +89,7 @@ template<typename T>
 Result<T, ThreadError> Thread::join()
 {
     VERIFY(needs_to_be_joined());
-
+#if !defined(AK_OS_WINDOWS)
     void* thread_return = nullptr;
     int rc = pthread_join(m_tid, &thread_return);
     if (rc != 0) {
@@ -94,9 +105,12 @@ Result<T, ThreadError> Thread::join()
         return {};
     else
         return { static_cast<T>(thread_return) };
-}
-
-}
+#else
+    dbgln("Thread::join({}) not supported yet");
+    VERIFY_NOT_REACHED();
+    return {};
+#endif
+};
 
 template<>
 struct AK::Formatter<Threading::Thread> : AK::Formatter<FormatString> {
@@ -136,3 +150,5 @@ struct AK::Formatter<Threading::ThreadState> : AK::Formatter<FormatString> {
         return Formatter<FormatString>::format(builder, "{}"sv, name);
     }
 };
+
+}

@@ -19,7 +19,7 @@
 #include <LibTLS/TLSv12.h>
 #include <errno.h>
 
-#ifndef SOCK_NONBLOCK
+#if defined(SOCK_NONBLOCK) && !defined(AK_OS_WINDOWS)
 #    include <sys/ioctl.h>
 #endif
 

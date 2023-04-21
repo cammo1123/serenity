@@ -14,6 +14,7 @@
 #include <AK/Types.h>
 #include <LibIPC/Forward.h>
 #if defined(AK_OS_WINDOWS)
+#    include <io.h>
 #    include <windows.h>
 #endif
 
@@ -50,8 +51,8 @@ private:
 class AnonymousBuffer {
 public:
     static ErrorOr<AnonymousBuffer> create_with_size(size_t);
-#if !defined(AK_OS_WINDOWS)
     static ErrorOr<AnonymousBuffer> create_from_anon_fd(int fd, size_t);
+#if !defined(AK_OS_WINDOWS)
     int fd() const { return m_impl ? m_impl->fd() : -1; }
 #else
     static ErrorOr<AnonymousBuffer> create_from_anon_handle(HANDLE file_handle, size_t);

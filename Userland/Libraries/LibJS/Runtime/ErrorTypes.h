@@ -335,7 +335,7 @@ namespace JS {
 class ErrorType {
 public:
 #define __ENUMERATE_JS_ERROR(name, message) \
-    LibJS_API static const ErrorType name;
+    LIBJS_API static const ErrorType name;
     JS_ENUMERATE_ERROR_TYPES(__ENUMERATE_JS_ERROR)
 #undef __ENUMERATE_JS_ERROR
 

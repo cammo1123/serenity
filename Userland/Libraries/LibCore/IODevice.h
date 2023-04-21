@@ -12,7 +12,7 @@
 #include <AK/Stream.h>
 #include <LibCore/Object.h>
 #if defined(AK_OS_WINDOWS)
-#    include <WinSock2.h>
+#    include <winsock2.h>
 #else
 #    include <sys/select.h>
 #    define SOCKET int

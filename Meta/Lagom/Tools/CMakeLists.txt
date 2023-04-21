@@ -32,8 +32,8 @@ function(lagom_tool tool)
     target_link_libraries(${tool} LibCore LibFileSystem ${LAGOM_TOOL_LIBS})
     if(WIN32)
         set (LAGOM_TOOL_LIBS
-            "${CMAKE_BINARY_DIR}/lagom/lagom-core.dll"
-            "${CMAKE_BINARY_DIR}/lagom/lagom-filesystem.dll"
+            "${CMAKE_BINARY_DIR}/lagom/Debug/lagom-core.dll"
+            "${CMAKE_BINARY_DIR}/lagom/Debug/lagom-filesystem.dll"
         )
 
         set_property(GLOBAL PROPERTY LAGOM_TOOL_LIBS ${LAGOM_TOOL_LIBS})

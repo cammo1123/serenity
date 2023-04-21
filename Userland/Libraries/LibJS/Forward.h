@@ -147,14 +147,10 @@
     __JS_ENUMERATE(unicode, unicode, u)          \
     __JS_ENUMERATE(sticky, sticky, y)
 
-#if defined(AK_OS_WINDOWS)
-#    if defined(LibJS_EXPORTS)
-#        define LibJS_API __declspec(dllexport)
-#    else
-#        define LibJS_API __declspec(dllimport)
-#    endif
+#ifdef LibJS_EXPORTS
+#    define LIBJS_API __declspec(dllexport)
 #else
-#    define LibJS_API __attribute__((visibility("default")))
+#    define LIBJS_API __declspec(dllimport)
 #endif
 
 namespace JS {

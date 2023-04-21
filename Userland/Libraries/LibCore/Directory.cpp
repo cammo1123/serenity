@@ -14,7 +14,6 @@
 #    include <winbase.h>
 #    include <windows.h>
 #    include <winternl.h>
-#include <io.h>
 #endif
 
 namespace Core {
@@ -62,10 +61,17 @@ Directory::~Directory()
 #if !defined(AK_OS_WINDOWS)
 ErrorOr<void> Directory::chown(uid_t uid, gid_t gid)
 {
+#if !defined(AK_OS_WINDOWS)
     if (m_directory_fd == -1)
         return Error::from_syscall("fchown"sv, -EBADF);
     TRY(Core::System::fchown(m_directory_fd, uid, gid));
     return {};
+#else
+    (void)uid;
+    (void)gid;
+    dbgln("Directory::chown() not implemented on Windows");
+    VERIFY_NOT_REACHED();
+#endif
 }
 #endif
 
@@ -153,7 +159,8 @@ ErrorOr<struct stat> Directory::stat() const
 #if !defined(AK_OS_WINDOWS)
     return System::fstat(m_directory_fd);
 #else
-    return System::fstat(_open_osfhandle((intptr_t) m_directory_handle, 0));
+    dbgln("Directory::stat() not implemented on Windows");
+    VERIFY_NOT_REACHED();
 #endif
 }
 

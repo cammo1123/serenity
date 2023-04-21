@@ -5,6 +5,7 @@
  */
 
 #include <AK/GenericLexer.h>
+#include <AK/StringImpl.h>
 #include <LibCrypto/ASN1/ASN1.h>
 
 namespace Crypto::ASN1 {

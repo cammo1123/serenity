@@ -21,8 +21,7 @@
 #include <LibJS/Runtime/Value.h>
 #include <LibJS/Runtime/ValueTraits.h>
 
-// Windows defines Yield, which conflicts with the Yield instruction. So we need to undefine it.
-#ifdef Yield
+#if defined(AK_OS_WINDOWS)
 #    undef Yield
 #endif
 

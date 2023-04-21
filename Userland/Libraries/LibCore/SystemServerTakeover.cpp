@@ -56,7 +56,7 @@ ErrorOr<NonnullOwnPtr<Core::LocalSocket>> take_over_socket_from_system_server(De
         fd = it->value;
     }
 
-    // Sanity check: it has to be a socket.
+// Sanity check: it has to be a socket.
 #if !defined(AK_OS_WINDOWS)
     auto stat = TRY(Core::System::fstat(fd));
 

@@ -10,6 +10,12 @@
 #include <LibHTTP/HttpRequest.h>
 #include <LibHTTP/Job.h>
 
+// Windows defines this in some in winnt.h which gets included.
+// I am unsure where, but it is due to LibHTTP/Job.h
+#if defined(DELETE)
+#undef DELETE
+#endif
+
 namespace HTTP {
 
 DeprecatedString to_deprecated_string(HttpRequest::Method method)
