@@ -35,7 +35,6 @@ if (NOT WIN32)
         SessionManagement.cpp
         SOCKSProxyClient.cpp
         System.cpp
-        TempFile.cpp
         UDPServer.cpp
     )
 else()

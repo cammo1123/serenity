@@ -17,6 +17,10 @@
 #    include <string.h>
 #endif
 
+#if defined(AK_OS_WINDOWS)
+#    include <windows.h>
+#endif
+
 namespace AK {
 
 class Error {
@@ -27,7 +31,7 @@ public:
     [[nodiscard]] static Error from_errno(int code) { return Error(code); }
 
 #if defined(AK_OS_WINDOWS)
-    [[nodiscard]] static Error from_windows_error(int code);
+    [[nodiscard]] static Error from_windows_error(DWORD code);
 #endif
 
     // NOTE: For calling this method from within kernel code, we will simply print

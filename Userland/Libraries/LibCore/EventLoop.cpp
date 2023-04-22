@@ -39,6 +39,7 @@
 #    include <sys/socket.h>
 #    include <sys/time.h>
 #    include <unistd.h>
+#    define SOCKET int
 #endif
 
 #ifdef AK_OS_SERENITY

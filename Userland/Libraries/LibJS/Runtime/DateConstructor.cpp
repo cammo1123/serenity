@@ -17,8 +17,12 @@
 #include <LibJS/Runtime/DatePrototype.h>
 #include <LibJS/Runtime/GlobalObject.h>
 #include <LibJS/Runtime/VM.h>
-#include <sys/time.h>
 #include <time.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/time.h>
+#else
+#    include <sys/timeb.h>
+#endif
 
 namespace JS {
 
@@ -311,7 +315,14 @@ ThrowCompletionOr<NonnullGCPtr<Object>> DateConstructor::construct(FunctionObjec
 JS_DEFINE_NATIVE_FUNCTION(DateConstructor::now)
 {
     struct timeval tv;
+#if !defined(AK_OS_WINDOWS)
     gettimeofday(&tv, nullptr);
+#else
+    struct _timeb tb;
+    _ftime(&tb);
+    tv.tv_sec = tb.time;
+    tv.tv_usec = tb.millitm * 1000;
+#endif
     return Value(floor(tv.tv_sec * 1000.0 + tv.tv_usec / 1000.0));
 }
 

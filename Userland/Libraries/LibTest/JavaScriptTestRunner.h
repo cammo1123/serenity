@@ -33,8 +33,12 @@
 #include <LibTest/Results.h>
 #include <LibTest/TestRunner.h>
 #include <fcntl.h>
-#include <sys/time.h>
-#include <unistd.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/time.h>
+#    include <unistd.h>
+#else
+#    include <direct.h>
+#endif
 
 #ifdef AK_OS_SERENITY
 #    include <serenity.h>

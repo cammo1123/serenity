@@ -49,12 +49,20 @@ ErrorOr<String> real_path(StringView path)
 
     char buffer[PATH_MAX];
     DeprecatedString dep_path = path;
+
+#if !defined(AK_OS_WINDOWS)
     auto* real_path = realpath(dep_path.characters(), buffer);
 
     if (!real_path)
         return Error::from_syscall("realpath"sv, -errno);
 
     return TRY(String::from_utf8({ real_path, strlen(real_path) }));
+#else
+    if (GetFullPathName(dep_path.characters(), MAX_PATH, buffer, nullptr) == 0)
+        return Error::from_windows_error(GetLastError());
+
+    return TRY(String::from_deprecated_string(buffer));
+#endif
 }
 
 bool exists(StringView path)
@@ -69,92 +77,144 @@ bool exists(int fd)
 
 bool is_device(StringView path)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::stat(path);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode);
+#else
+    dbgln("FileSystem::is_device({}) is not implemented on Windows", path);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_device(int fd)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::fstat(fd);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISBLK(st.st_mode) || S_ISCHR(st.st_mode);
+#else
+    dbgln("FileSystem::is_device({}) is not implemented on Windows", fd);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_block_device(StringView path)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::stat(path);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISBLK(st.st_mode);
+#else
+    dbgln("FileSystem::is_block_device({}) is not implemented on Windows", path);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_block_device(int fd)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::fstat(fd);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISBLK(st.st_mode);
+#else
+    dbgln("FileSystem::is_block_device({}) is not implemented on Windows", fd);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_char_device(StringView path)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::stat(path);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISCHR(st.st_mode);
+#else
+    dbgln("FileSystem::is_char_device({}) is not implemented on Windows", path);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_char_device(int fd)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::fstat(fd);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISCHR(st.st_mode);
+#else
+    dbgln("FileSystem::is_char_device({}) is not implemented on Windows", fd);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_directory(StringView path)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::stat(path);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISDIR(st.st_mode);
+#else
+    DWORD const attributes = GetFileAttributes(path.to_deprecated_string().characters());
+    if (attributes == INVALID_FILE_ATTRIBUTES)
+        return false;
+    return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0u;
+#endif
 }
 
 bool is_directory(int fd)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::fstat(fd);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISDIR(st.st_mode);
+#else
+    dbgln("FileSystem::is_directory({}) is not implemented on Windows", fd);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_link(StringView path)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::lstat(path);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISLNK(st.st_mode);
+#else
+    dbgln("FileSystem::is_link({}) is not implemented on Windows", path);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 bool is_link(int fd)
 {
+#if !defined(AK_OS_WINDOWS)
     auto st_or_error = Core::System::fstat(fd);
     if (st_or_error.is_error())
         return false;
     auto st = st_or_error.release_value();
     return S_ISLNK(st.st_mode);
+#else
+    dbgln("FileSystem::is_link({}) is not implemented on Windows", fd);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 static ErrorOr<String> get_duplicate_file_name(StringView path)
@@ -203,22 +263,37 @@ ErrorOr<void> copy_file(StringView destination_path, StringView source_path, str
     if (!has_flag(preserve_mode, PreserveMode::Permissions))
         my_umask |= 06000;
 
+#if !defined(AK_OS_WINDOWS)
     TRY(Core::System::fchmod(destination->fd(), source_stat.st_mode & ~my_umask));
+#else
+    dbgln("FileSystem::copy_file() preserving permissions is not supported on Windows", source_path);
+#endif
 
-    if (has_flag(preserve_mode, PreserveMode::Ownership))
+    if (has_flag(preserve_mode, PreserveMode::Ownership)) {
+#if !defined(AK_OS_WINDOWS)
         TRY(Core::System::fchown(destination->fd(), source_stat.st_uid, source_stat.st_gid));
+#else
+        dbgln("FileSystem::copy_file() preserving ownership is not implemented on Windows", source_path);
+        VERIFY_NOT_REACHED();
+#endif
+    }
 
     if (has_flag(preserve_mode, PreserveMode::Timestamps)) {
+#if !defined(AK_OS_WINDOWS)
         struct timespec times[2] = {
-#ifdef AK_OS_MACOS
+#    ifdef AK_OS_MACOS
             source_stat.st_atimespec,
             source_stat.st_mtimespec,
-#else
+#    else
             source_stat.st_atim,
             source_stat.st_mtim,
-#endif
+#    endif
         };
         TRY(Core::System::utimensat(AT_FDCWD, destination_path, times, 0));
+#else
+        dbgln("FileSystem::copy_file() preserving timestamps is not implemented on Windows", source_path);
+        VERIFY_NOT_REACHED();
+#endif
     }
     return {};
 }
@@ -253,20 +328,31 @@ ErrorOr<void> copy_directory(StringView destination_path, StringView source_path
 
     TRY(Core::System::chmod(destination_path, source_stat.st_mode & ~my_umask));
 
-    if (has_flag(preserve_mode, PreserveMode::Ownership))
+    if (has_flag(preserve_mode, PreserveMode::Ownership)) {
+#if !defined(AK_OS_WINDOWS)
         TRY(Core::System::chown(destination_path, source_stat.st_uid, source_stat.st_gid));
+#else
+        dbgln("FileSystem::copy_directory() preserving ownership is not implemented on Windows", source_path);
+        VERIFY_NOT_REACHED();
+#endif
+    }
 
     if (has_flag(preserve_mode, PreserveMode::Timestamps)) {
+#if !defined(AK_OS_WINDOWS)
         struct timespec times[2] = {
-#ifdef AK_OS_MACOS
+#    ifdef AK_OS_MACOS
             source_stat.st_atimespec,
             source_stat.st_mtimespec,
-#else
+#    else
             source_stat.st_atim,
             source_stat.st_mtim,
-#endif
+#    endif
         };
         TRY(Core::System::utimensat(AT_FDCWD, destination_path, times, 0));
+#else
+        dbgln("FileSystem::copy_directory() preserving timestamps is not implemented on Windows", source_path);
+        VERIFY_NOT_REACHED();
+#endif
     }
 
     return {};
@@ -330,6 +416,7 @@ bool can_delete_or_move(StringView path)
     if (!directory_has_write_access)
         return false;
 
+#if !defined(AK_OS_WINDOWS)
     auto stat_or_empty = [](StringView path) {
         auto stat_or_error = Core::System::stat(path);
         if (stat_or_error.is_error()) {
@@ -347,6 +434,10 @@ bool can_delete_or_move(StringView path)
     // Directory is sticky, only the file owner, directory owner, and root can modify (rename, remove) it.
     auto user_id = geteuid();
     return user_id == 0 || directory_stat.st_uid == user_id || stat_or_empty(path).st_uid == user_id;
+#else
+    dbgln("FileSystem::can_delete_or_move() is not implemented on Windows");
+    return true;
+#endif
 }
 
 ErrorOr<String> read_link(StringView link_path)
@@ -366,7 +457,11 @@ ErrorOr<String> resolve_executable_from_environment(StringView filename)
 
     // Paths that aren't just a file name generally count as already resolved.
     if (filename.contains('/')) {
+#if !defined(AK_OS_WINDOWS)
         TRY(Core::System::access(filename, X_OK));
+#else
+        GetBinaryType(filename.to_deprecated_string().characters(), nullptr);
+#endif
         return TRY(String::from_utf8(filename));
     }
 
@@ -381,9 +476,13 @@ ErrorOr<String> resolve_executable_from_environment(StringView filename)
 
     for (auto directory : directories) {
         auto file = TRY(String::formatted("{}/{}", directory, filename));
-
+#if !defined(AK_OS_WINDOWS)
         if (!Core::System::access(file, X_OK).is_error())
             return file;
+#else
+        if (GetBinaryType(path.to_deprecated_string().characters(), nullptr) != SCS_32BIT_BINARY)
+            return file;
+#endif
     }
 
     return Error::from_errno(ENOENT);

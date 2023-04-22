@@ -7,10 +7,6 @@
 
 #include <AK/Error.h>
 
-#if defined(AK_OS_WINDOWS)
-#    include <windows.h>
-#endif
-
 #if defined(KERNEL)
 #    include <AK/Format.h>
 #endif
@@ -27,7 +23,8 @@ Error Error::from_string_view_or_print_error_and_return_errno(StringView string_
 #endif
 }
 
-Error Error::from_windows_error(int code)
+#if defined(AK_OS_WINDOWS)
+Error Error::from_windows_error(DWORD code)
 {
     char* message = nullptr;
 
@@ -46,5 +43,6 @@ Error Error::from_windows_error(int code)
     LocalFree(message);
     return error;
 }
+#endif
 
 }

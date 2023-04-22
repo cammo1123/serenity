@@ -6,6 +6,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Format.h"
 #include <AK/Array.h>
 #include <AK/Debug.h>
 #include <AK/LexicalPath.h>
@@ -941,6 +942,7 @@ ThrowCompletionOr<NonnullGCPtr<Module>> VM::resolve_imported_module(ScriptOrModu
     auto file_or_error = Core::DeprecatedFile::open(filename, Core::OpenMode::ReadOnly);
 
     if (file_or_error.is_error()) {
+        dbgln("[JS MODULE] failed to open file '{}': {}", filename, file_or_error.error());
         return throw_completion<SyntaxError>(ErrorType::ModuleNotFound, module_request.module_specifier);
     }
 

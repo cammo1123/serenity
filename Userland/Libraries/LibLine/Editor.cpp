@@ -12,6 +12,7 @@
 #include <AK/JsonObject.h>
 #include <AK/MemoryStream.h>
 #include <AK/RedBlackTree.h>
+#include <AK/RefPtr.h>
 #include <AK/ScopeGuard.h>
 #include <AK/ScopedValueRollback.h>
 #include <AK/StringBuilder.h>
@@ -26,10 +27,17 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
-#include <sys/ioctl.h>
-#include <sys/select.h>
-#include <sys/time.h>
-#include <unistd.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/select.h>
+#    include <sys/time.h>
+#    include <unistd.h>
+#else
+#    include <io.h>
+#    define STDIN_FILENO _fileno(stdin)
+#    define STDOUT_FILENO _fileno(stdout)
+#    define STDERR_FILENO _fileno(stderr)
+#    include <stdlib.h>
+#endif
 
 namespace {
 constexpr u32 ctrl(char c) { return c & 0x3f; }
@@ -174,12 +182,18 @@ void Editor::set_default_keybinds()
     register_key_input_callback(Key { 'u', Key::Alt }, EDITOR_INTERNAL_FUNCTION(uppercase_word));
     register_key_input_callback(Key { 't', Key::Alt }, EDITOR_INTERNAL_FUNCTION(transpose_words));
 
+#if !defined(AK_OS_WINDOWS)
     // Register these last to all the user to override the previous key bindings
     // Normally ^W. `stty werase \^n` can change it to ^N (or something else).
     register_key_input_callback(m_termios.c_cc[VWERASE], EDITOR_INTERNAL_FUNCTION(erase_word_backwards));
     // Normally ^U. `stty kill \^n` can change it to ^N (or something else).
     register_key_input_callback(m_termios.c_cc[VKILL], EDITOR_INTERNAL_FUNCTION(kill_line));
     register_key_input_callback(m_termios.c_cc[VERASE], EDITOR_INTERNAL_FUNCTION(erase_character_backwards));
+#else
+    register_key_input_callback(ctrl('W'), EDITOR_INTERNAL_FUNCTION(erase_word_backwards));
+    register_key_input_callback(ctrl('U'), EDITOR_INTERNAL_FUNCTION(kill_line));
+    register_key_input_callback(VK_BACK, EDITOR_INTERNAL_FUNCTION(erase_character_backwards));
+#endif
 }
 
 Editor::Editor(Configuration configuration)
@@ -195,6 +209,22 @@ Editor::~Editor()
 {
     if (m_initialized)
         restore();
+}
+
+void Editor::restore()
+{
+    VERIFY(m_initialized);
+#if !defined(AK_OS_WINDOWS)
+    tcsetattr(0, TCSANOW, &m_default_termios);
+#else
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    SetConsoleMode(hStdin, m_default_console_mode);
+#endif
+    m_initialized = false;
+    if (m_configuration.enable_bracketed_paste)
+        warn("\x1b[?2004l");
+    for (auto id : m_signal_handlers)
+        Core::EventLoop::unregister_signal(id);
 }
 
 void Editor::ensure_free_lines_from_origin(size_t count)
@@ -216,6 +246,7 @@ void Editor::ensure_free_lines_from_origin(size_t count)
 
 void Editor::get_terminal_size()
 {
+#if !defined(AK_OS_WINDOWS)
     struct winsize ws;
     ioctl(STDERR_FILENO, TIOCGWINSZ, &ws);
     if (ws.ws_col == 0 || ws.ws_row == 0) {
@@ -228,6 +259,12 @@ void Editor::get_terminal_size()
     }
     m_num_columns = ws.ws_col;
     m_num_lines = ws.ws_row;
+#else
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(GetStdHandle(STD_ERROR_HANDLE), &csbi);
+    m_num_columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+    m_num_lines = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+#endif
 }
 
 void Editor::add_to_history(DeprecatedString const& line)
@@ -244,7 +281,14 @@ void Editor::add_to_history(DeprecatedString const& line)
     if ((m_history.size() + 1) > m_history_capacity)
         m_history.take_first();
     struct timeval tv;
+#if !defined(AK_OS_WINDOWS)
     gettimeofday(&tv, nullptr);
+#else
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    tv.tv_sec = ft.dwLowDateTime;
+    tv.tv_usec = ft.dwHighDateTime;
+#endif
     m_history.append({ line, tv.tv_sec });
     m_history_dirty = true;
 }
@@ -532,9 +576,16 @@ void Editor::initialize()
     if (m_initialized)
         return;
 
+#if !defined(AK_OS_WINDOWS)
     struct termios termios;
     tcgetattr(0, &termios);
     m_default_termios = termios; // grab a copy to restore
+#else
+    HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+    DWORD mode;
+    GetConsoleMode(hStdin, &mode);
+    m_default_console_mode = mode;
+#endif
 
     get_terminal_size();
 
@@ -554,11 +605,20 @@ void Editor::initialize()
     // Because we use our own line discipline which includes echoing,
     // we disable ICANON and ECHO.
     if (m_configuration.operation_mode == Configuration::Full) {
+#if !defined(AK_OS_WINDOWS)
         termios.c_lflag &= ~(ECHO | ICANON);
         tcsetattr(0, TCSANOW, &termios);
     }
 
     m_termios = termios;
+#else
+        mode &= ~ENABLE_ECHO_INPUT;
+        mode &= ~ENABLE_LINE_INPUT;
+        SetConsoleMode(hStdin, mode);
+    }
+
+    m_console_mode = mode;
+#endif
 
     set_default_keybinds();
     for (auto& keybind : m_configuration.keybindings)
@@ -569,14 +629,17 @@ void Editor::initialize()
             interrupted().release_value_but_fixme_should_propagate_errors();
         }));
 
+#if !defined(AK_OS_WINDOWS)
         m_signal_handlers.append(Core::EventLoop::register_signal(SIGWINCH, [this](int) {
             resized().release_value_but_fixme_should_propagate_errors();
         }));
+#endif
     }
 
     m_initialized = true;
 }
 
+#if !defined(AK_OS_WINDOWS)
 void Editor::refetch_default_termios()
 {
     struct termios termios;
@@ -586,6 +649,7 @@ void Editor::refetch_default_termios()
         termios.c_lflag &= ~(ECHO | ICANON);
     m_termios = termios;
 }
+#endif
 
 ErrorOr<void> Editor::interrupted()
 {
@@ -683,6 +747,60 @@ ErrorOr<void> Editor::really_quit_event_loop()
     Core::EventLoop::current().quit(Exit);
     return {};
 }
+#if defined(AK_OS_WINDOWS)
+int getline(char** lineptr, size_t* n, FILE* stream)
+{
+    char* bufptr = NULL;
+    char* p = bufptr;
+    size_t size;
+    int c;
+
+    if (lineptr == NULL) {
+        return -1;
+    }
+    if (stream == NULL) {
+        return -1;
+    }
+    if (n == NULL) {
+        return -1;
+    }
+    bufptr = *lineptr;
+    size = *n;
+
+    c = fgetc(stream);
+    if (c == EOF) {
+        return -1;
+    }
+    if (bufptr == NULL) {
+        bufptr = (char*)malloc(128);
+        if (bufptr == NULL) {
+            return -1;
+        }
+        size = 128;
+    }
+    p = bufptr;
+    while (c != EOF) {
+        if ((p - bufptr) > (long long)(size - 1)) {
+            size = size + 128;
+            bufptr = (char*)realloc(bufptr, size);
+            if (bufptr == NULL) {
+                return -1;
+            }
+        }
+        *p++ = c;
+        if (c == '\n') {
+            break;
+        }
+        c = fgetc(stream);
+    }
+
+    *p++ = '\0';
+    *lineptr = bufptr;
+    *n = size;
+
+    return p - bufptr - 1;
+}
+#endif
 
 auto Editor::get_line(DeprecatedString const& prompt) -> Result<DeprecatedString, Editor::Error>
 {
@@ -1083,6 +1201,7 @@ ErrorOr<void> Editor::handle_read_event()
         // There are no sequences past this point, so short of 'tab', we will want to cleanup the suggestions.
         ArmedScopeGuard suggestion_cleanup { [this] { cleanup_suggestions().release_value_but_fixme_should_propagate_errors(); } };
 
+#if !defined(AK_OS_WINDOWS)
         // Normally ^D. `stty eof \^n` can change it to ^N (or something else), but Serenity doesn't have `stty` yet.
         // Process this here since the keybinds might override its behavior.
         // This only applies when the buffer is empty. at any other time, the behavior should be configurable.
@@ -1090,6 +1209,7 @@ ErrorOr<void> Editor::handle_read_event()
             finish_edit();
             continue;
         }
+#endif
 
         m_callback_machine.key_pressed(*this, code_point);
         if (!m_callback_machine.should_process_last_pressed_key())
@@ -2330,5 +2450,4 @@ bool Editor::Spans::contains_up_to_offset(Spans const& other, size_t offset) con
     return compare(m_spans_starting, other.m_spans_starting)
         && compare(m_anchored_spans_starting, other.m_anchored_spans_starting);
 }
-
 }
