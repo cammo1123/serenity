@@ -8,7 +8,7 @@ env:
 jobs:
   build-and-package:
     runs-on: ${{ matrix.os }}
-    if: always() && github.repository == 'SerenityOS/serenity' && github.ref == 'refs/heads/master'
+    if: always() && github.repository == 'cammo1123/serenity' && github.ref == 'refs/heads/master'
     strategy:
       fail-fast: false
       matrix:
@@ -23,7 +23,7 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - name: Checkout SerenityOS/serenity
+      - name: Checkout cammo1123/serenity
         uses: actions/checkout@v3
 
       - name: Install dependencies Ubuntu

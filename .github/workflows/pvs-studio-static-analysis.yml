@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       PVS_STUDIO_ANALYSIS_ARCH: x86_64
-    if: always() && github.repository == 'SerenityOS/serenity' && github.ref == 'refs/heads/master'
+    if: always() && github.repository == 'cammo1123/serenity' && github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v3
 

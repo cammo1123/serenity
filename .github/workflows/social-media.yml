@@ -5,7 +5,7 @@ on: [ push ]
 jobs:
   notify_twitter:
     runs-on: ubuntu-22.04
-    if: always() && github.repository == 'SerenityOS/serenity' && github.ref == 'refs/heads/master'
+    if: always() && github.repository == 'cammo1123/serenity' && github.ref == 'refs/heads/master'
 
     steps:
       - uses: actions/checkout@v3
@@ -25,7 +25,7 @@ jobs:
 
   notify_mastodon:
     runs-on: ubuntu-22.04
-    if: always() && github.repository == 'SerenityOS/serenity' && github.ref == 'refs/heads/master'
+    if: always() && github.repository == 'cammo1123/serenity' && github.ref == 'refs/heads/master'
 
     steps:
       - uses: actions/checkout@v3
