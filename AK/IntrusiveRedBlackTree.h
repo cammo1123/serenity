@@ -174,7 +174,8 @@ private:
 
     static V* node_to_value(TreeNode& node)
     {
-        return bit_cast<V*>(bit_cast<u8*>(&node) - bit_cast<u8*>(member));
+        using EquvalentNumericType = Conditional<sizeof(member) == sizeof(FlatPtr), FlatPtr, u32>; // apparently always u32 on windows :/
+        return bit_cast<V*>(bit_cast<u8*>(&node) - bit_cast<EquvalentNumericType>(member));
     }
 };
 

@@ -23,7 +23,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 constexpr size_t buffer_size = 4096;
 

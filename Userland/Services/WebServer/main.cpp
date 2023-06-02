@@ -18,7 +18,6 @@
 #include <WebServer/Client.h>
 #include <WebServer/Configuration.h>
 #include <stdio.h>
-#include <unistd.h>
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {

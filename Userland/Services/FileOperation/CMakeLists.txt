@@ -8,4 +8,4 @@ set(SOURCES
 )
 
 serenity_bin(FileOperation)
-target_link_libraries(FileOperation PRIVATE LibCore LibMain)
+target_link_libraries(FileOperation PRIVATE LibCore LibMain LibFileSystem)

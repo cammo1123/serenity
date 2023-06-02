@@ -486,6 +486,10 @@ if (BUILD_LAGOM)
         lagom_lib(LibWebView webview
             SOURCES ${LIBWEBVIEW_SOURCES} ${LIBWEBVIEW_GENERATED_SOURCES}
             LIBS LibGfx LibGUI LibIPC LibWeb)
+
+        if(WIN32)
+            target_link_libraries(LibWebView PRIVATE ws2_32)
+        endif()
         unset(GENERATED_SOURCES)
     endif()
 
@@ -625,9 +629,6 @@ if (BUILD_LAGOM)
             target_link_libraries(ntpquery LibCore LibMain)
         endif()
 
-        add_executable(sql ../../Userland/Utilities/sql.cpp)
-        target_link_libraries(sql LibCore LibFileSystem LibIPC LibLine LibMain LibSQL)
-
         add_executable(tar ../../Userland/Utilities/tar.cpp)
         target_link_libraries(tar LibArchive LibCompress LibCore LibFileSystem LibMain)
 
@@ -650,8 +651,13 @@ if (BUILD_LAGOM)
             target_compile_definitions(test262-runner PRIVATE ASSERT_FAIL_HAS_INT)
         endif()
 
-        add_executable(wasm ../../Userland/Utilities/wasm.cpp)
-        target_link_libraries(wasm LibCore LibFileSystem LibWasm LibLine LibMain LibJS)
+        if (NOT WIN32)
+            add_executable(sql ../../Userland/Utilities/sql.cpp)
+            target_link_libraries(sql LibCore LibFileSystem LibIPC LibLine LibMain LibSQL)
+
+            add_executable(wasm ../../Userland/Utilities/wasm.cpp)
+            target_link_libraries(wasm LibCore LibFileSystem LibWasm LibLine LibMain LibJS)
+        endif()
 
         add_executable(xml ../../Userland/Utilities/xml.cpp)
         target_link_libraries(xml LibCore LibFileSystem LibMain LibXML)

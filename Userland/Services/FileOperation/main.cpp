@@ -13,10 +13,17 @@
 #include <LibCore/DirIterator.h>
 #include <LibCore/File.h>
 #include <LibCore/System.h>
+#include <LibFileSystem/FileSystem.h>
 #include <LibMain/Main.h>
-#include <sched.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <sched.h>
+#    include <unistd.h>
+#else
+#    include <io.h>
+#    include <windows.h>
+#endif
 
 struct WorkItem {
     enum class Type {
@@ -80,7 +87,7 @@ static void report_error(StringView message)
 
 static ErrorOr<int> collect_copy_work_items(DeprecatedString const& source, DeprecatedString const& destination, Vector<WorkItem>& items)
 {
-    if (auto const st = TRY(Core::System::lstat(source)); !S_ISDIR(st.st_mode)) {
+    if (auto st = TRY(Core::System::stat(source)); FileSystem::is_directory(source)) {
         // It's a file.
         items.append(WorkItem {
             .type = WorkItem::Type::CopyFile,
@@ -124,7 +131,7 @@ ErrorOr<int> perform_copy(Vector<StringView> const& sources, DeprecatedString co
 
 static ErrorOr<int> collect_move_work_items(DeprecatedString const& source, DeprecatedString const& destination, Vector<WorkItem>& items)
 {
-    if (auto const st = TRY(Core::System::lstat(source)); !S_ISDIR(st.st_mode)) {
+    if (auto st = TRY(Core::System::stat(source)); FileSystem::is_directory(source)) {
         // It's a file.
         items.append(WorkItem {
             .type = WorkItem::Type::MoveFile,
@@ -175,7 +182,7 @@ ErrorOr<int> perform_move(Vector<StringView> const& sources, DeprecatedString co
 
 static ErrorOr<int> collect_delete_work_items(DeprecatedString const& source, Vector<WorkItem>& items)
 {
-    if (auto const st = TRY(Core::System::lstat(source)); !S_ISDIR(st.st_mode)) {
+    if (auto st = TRY(Core::System::stat(source)); FileSystem::is_directory(source)) {
         // It's a file.
         items.append(WorkItem {
             .type = WorkItem::Type::DeleteFile,
@@ -251,7 +258,9 @@ ErrorOr<int> execute_work_items(Vector<WorkItem> const& items)
                 // FIXME: Remove this once the kernel is smart enough to schedule other threads
                 //        while we're doing heavy I/O. Right now, copying a large file will totally
                 //        starve the rest of the system.
+#if !defined(AK_OS_WINDOWS)
                 sched_yield();
+#endif
             }
             print_progress();
             return 0;
@@ -262,7 +271,7 @@ ErrorOr<int> execute_work_items(Vector<WorkItem> const& items)
         case WorkItem::Type::CreateDirectory: {
             outln("MKDIR {}", item.destination);
             // FIXME: Support deduplication like open_destination_file() when the directory already exists.
-            if (mkdir(item.destination.characters(), 0755) < 0 && errno != EEXIST)
+            if (auto result = Core::System::mkdir(item.destination, 0755); result.is_error() && result.error().code() != EEXIST)
                 return Error::from_syscall("mkdir"sv, -errno);
             break;
         }

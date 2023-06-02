@@ -10,7 +10,10 @@
 #include <AK/StringBuilder.h>
 #include <AK/Vector.h>
 #include <math.h>
-#include <unistd.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <unistd.h>
+#endif
 
 TEST_CASE(is_integral_works_properly)
 {
@@ -227,6 +230,7 @@ TEST_CASE(format_if_supported)
     EXPECT_EQ(DeprecatedString::formatted("{}", FormatIfSupported { B {} }), "B");
 }
 
+#if !defined(AK_OS_WINDOWS)
 TEST_CASE(file_descriptor)
 {
     char filename[] = "/tmp/test-file-descriptor-XXXXXX";
@@ -249,6 +253,7 @@ TEST_CASE(file_descriptor)
 
     unlink(filename);
 }
+    #endif
 
 TEST_CASE(floating_point_numbers)
 {
@@ -366,6 +371,7 @@ TEST_CASE(vector_format)
     }
 }
 
+#if !defined(AK_OS_WINDOWS)
 TEST_CASE(format_wchar)
 {
     EXPECT_EQ(DeprecatedString::formatted("{}", L'a'), "a");
@@ -379,3 +385,4 @@ TEST_CASE(format_wchar)
     EXPECT_EQ(DeprecatedString::formatted("{:6d}", L'a'), "    97");
     EXPECT_EQ(DeprecatedString::formatted("{:#x}", L'\U0001F41E'), "0x1f41e");
 }
+#endif

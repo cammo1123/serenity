@@ -17,7 +17,6 @@
 #include <LibHTTP/HttpResponse.h>
 #include <LibHTTP/Job.h>
 #include <stdio.h>
-#include <unistd.h>
 
 namespace HTTP {
 

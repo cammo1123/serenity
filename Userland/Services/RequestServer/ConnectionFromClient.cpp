@@ -11,7 +11,9 @@
 #include <RequestServer/Protocol.h>
 #include <RequestServer/Request.h>
 #include <RequestServer/RequestClientEndpoint.h>
-#include <netdb.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <netdb.h>
+#endif
 
 namespace RequestServer {
 

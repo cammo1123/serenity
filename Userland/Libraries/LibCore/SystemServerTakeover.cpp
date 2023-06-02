@@ -61,10 +61,8 @@ ErrorOr<NonnullOwnPtr<Core::LocalSocket>> take_over_socket_from_system_server(De
     auto stat = TRY(Core::System::fstat(fd));
 
     if (!S_ISSOCK(stat.st_mode))
-#else
-    if (getsockname(fd, nullptr, nullptr) != 0)
-#endif
         return Error::from_string_literal("The fd we got from SystemServer is not a socket");
+#endif
 
     auto socket = TRY(Core::LocalSocket::adopt_fd(fd));
 #if !defined(AK_OS_WINDOWS)

@@ -12,6 +12,8 @@
 
 #if defined(AK_OS_SERENITY) && defined(KERNEL)
 #    include <errno_codes.h>
+#elif defined(AK_OS_WINDOWS)
+#    include <windows.h>
 #else
 #    include <errno.h>
 #    include <string.h>
@@ -31,7 +33,7 @@ public:
     }
 
 #if defined(AK_OS_WINDOWS)
-    [[nodiscard]] static Error from_windows_error(int code);
+    [[nodiscard]] static Error from_windows_error(DWORD code);
 #endif
 
     // NOTE: For calling this method from within kernel code, we will simply print

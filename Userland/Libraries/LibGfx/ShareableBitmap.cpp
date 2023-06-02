@@ -30,7 +30,12 @@ ErrorOr<void> encode(Encoder& encoder, Gfx::ShareableBitmap const& shareable_bit
         return {};
 
     auto& bitmap = *shareable_bitmap.bitmap();
+#if defined(AK_OS_WINDOWS)
+    dbgln("ShareableBitmap::encode: handle={}", bitmap.anonymous_buffer().handle());
+    TRY(encoder.encode(bitmap.anonymous_buffer()));
+#else
     TRY(encoder.encode(IPC::File(bitmap.anonymous_buffer().fd())));
+#endif
     TRY(encoder.encode(bitmap.size()));
     TRY(encoder.encode(static_cast<u32>(bitmap.scale())));
     TRY(encoder.encode(static_cast<u32>(bitmap.format())));
@@ -48,7 +53,11 @@ ErrorOr<Gfx::ShareableBitmap> decode(Decoder& decoder)
     if (auto valid = TRY(decoder.decode<bool>()); !valid)
         return Gfx::ShareableBitmap {};
 
+#if defined(AK_OS_WINDOWS)
+    auto buffer = TRY(decoder.decode<Core::AnonymousBuffer>());
+#else
     auto anon_file = TRY(decoder.decode<IPC::File>());
+#endif
     auto size = TRY(decoder.decode<Gfx::IntSize>());
     auto scale = TRY(decoder.decode<u32>());
     auto raw_bitmap_format = TRY(decoder.decode<u32>());
@@ -61,7 +70,9 @@ ErrorOr<Gfx::ShareableBitmap> decode(Decoder& decoder)
     if (Gfx::Bitmap::is_indexed(bitmap_format))
         palette = TRY(decoder.decode<decltype(palette)>());
 
+#if !defined(AK_OS_WINDOWS)
     auto buffer = TRY(Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), Gfx::Bitmap::size_in_bytes(Gfx::Bitmap::minimum_pitch(size.width() * scale, bitmap_format), size.height() * scale)));
+#endif
     auto bitmap = TRY(Gfx::Bitmap::create_with_anonymous_buffer(bitmap_format, move(buffer), size, scale, palette));
 
     return Gfx::ShareableBitmap { move(bitmap), Gfx::ShareableBitmap::ConstructWithKnownGoodBitmap };

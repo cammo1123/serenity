@@ -18,8 +18,9 @@ set(SOURCES
     Object.cpp
     Property.cpp
     SecretString.cpp
+    SessionManagement.cpp
     StandardPaths.cpp
-    Socket.cpp
+    SOCKSProxyClient.cpp
     SystemServerTakeover.cpp
     TCPServer.cpp
     ThreadEventQueue.cpp
@@ -35,10 +36,8 @@ set(SOURCES
         LockFile.cpp
         Process.cpp
         ProcessStatisticsReader.cpp
-        SessionManagement.cpp
-        SOCKSProxyClient.cpp
         System.cpp
-        TempFile.cpp
+        Socket.cpp
         UDPServer.cpp
     )
 else()
@@ -47,6 +46,9 @@ else()
         AnonymousBufferWindows.cpp
         EventLoopImplementationWindows.cpp
         SystemWindows.cpp
+        SocketWindows.cpp
+        ProcessWindows.cpp
+        LocalServer.cpp
 	)
 endif()
 if (NOT ANDROID AND NOT WIN32 AND NOT EMSCRIPTEN)

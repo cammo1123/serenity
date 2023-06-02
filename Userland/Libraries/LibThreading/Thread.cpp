@@ -5,9 +5,6 @@
  */
 
 #include <LibThreading/Thread.h>
-#include <pthread.h>
-#include <string.h>
-#include <unistd.h>
 
 namespace Threading {
 
@@ -35,6 +32,10 @@ Thread::~Thread()
 
 ErrorOr<void> Thread::set_priority(int priority)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("FIXME: Implement Thread::set_priority({}) for Windows", priority);
+    VERIFY_NOT_REACHED();
+#else
     // MacOS has an extra __opaque field, so list initialization will not compile on MacOS Lagom.
     sched_param scheduling_parameters {};
     scheduling_parameters.sched_priority = priority;
@@ -42,23 +43,42 @@ ErrorOr<void> Thread::set_priority(int priority)
     if (result != 0)
         return Error::from_errno(result);
     return {};
+#endif
 }
 
 ErrorOr<int> Thread::get_priority() const
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("FIXME: Implement Thread::get_priority() for Windows");
+    VERIFY_NOT_REACHED();
+#else
     sched_param scheduling_parameters {};
     int policy;
     int result = pthread_getschedparam(m_tid, &policy, &scheduling_parameters);
     if (result != 0)
         return Error::from_errno(result);
     return scheduling_parameters.sched_priority;
+#endif
 }
 
 DeprecatedString Thread::thread_name() const { return m_thread_name; }
 
-pthread_t Thread::tid() const { return m_tid; }
+#if defined(AK_OS_WINDOWS)
+HANDLE Thread::tid() const
+{
+    return m_tid;
+}
+#else
+pthread_t Thread::tid() const
+{
+    return m_tid;
+}
+#endif
 
-ThreadState Thread::state() const { return m_state; }
+ThreadState Thread::state() const
+{
+    return m_state;
+}
 
 bool Thread::is_started() const { return m_state != ThreadState::Startable; }
 
@@ -81,6 +101,10 @@ void Thread::start()
     // Set this first so that the other thread starts out seeing m_state == Running.
     m_state = Threading::ThreadState::Running;
 
+#if defined(AK_OS_WINDOWS)
+    dbgln("FIXME: Implement Thread::start() for Windows");
+    VERIFY_NOT_REACHED();
+#else
     int rc = pthread_create(
         &m_tid,
         // FIXME: Use pthread_attr_t to start a thread detached if that was requested by the user before the call to start().
@@ -109,6 +133,7 @@ void Thread::start()
         static_cast<void*>(this));
 
     VERIFY(rc == 0);
+#endif
 #ifdef AK_OS_SERENITY
     if (!m_thread_name.is_empty()) {
         rc = pthread_setname_np(m_tid, m_thread_name.characters());
@@ -131,8 +156,13 @@ void Thread::detach()
         VERIFY_NOT_REACHED();
     }
 
+#if defined(AK_OS_WINDOWS)
+    dbgln("FIXME: Implement Thread::detach() for Windows");
+    VERIFY_NOT_REACHED();
+#else
     int rc = pthread_detach(m_tid);
     VERIFY(rc == 0);
+#endif
 }
 
 }

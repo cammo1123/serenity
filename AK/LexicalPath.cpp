@@ -26,6 +26,10 @@ LexicalPath::LexicalPath(DeprecatedString path)
         m_parts.clear();
         return;
     }
+#if defined(AK_OS_WINDOWS)
+    // Normalize backslashes to forward slashes on Windows.
+    m_string = m_string.replace("\\"sv, "/"sv);
+#endif
 
     m_parts = m_string.split_view('/');
 
@@ -56,6 +60,19 @@ LexicalPath::LexicalPath(DeprecatedString path)
         m_title = m_basename;
         m_extension = {};
     }
+}
+
+bool LexicalPath::is_absolute() const
+{
+#if defined(AK_OS_WINDOWS)
+    if (m_string.is_empty())
+        return false;
+
+    // FIXME: This is not correct, but it's good enough for now.
+    return m_string[0] == '/' || m_string[0] == '\\';
+#else
+    return !m_string.is_empty() && m_string[0] == '/';
+#endif
 }
 
 Vector<DeprecatedString> LexicalPath::parts() const
@@ -147,6 +164,7 @@ DeprecatedString LexicalPath::absolute_path(DeprecatedString dir_path, Deprecate
 
 DeprecatedString LexicalPath::relative_path(StringView a_path, StringView a_prefix)
 {
+    dbgln("LexicalPath::relative_path(\"{}\", \"{}\")", a_path, a_prefix);
     if (!a_path.starts_with('/') || !a_prefix.starts_with('/')) {
         // FIXME: This should probably VERIFY or return an Optional<DeprecatedString>.
         return ""sv;

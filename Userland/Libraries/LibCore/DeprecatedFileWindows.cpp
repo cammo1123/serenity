@@ -117,61 +117,22 @@ bool DeprecatedFile::is_link() const
     dbgln("DeprecatedFile: is_link not implemented");
     VERIFY_NOT_REACHED();
 }
-bool DeprecatedFile::looks_like_shared_library() const
-{
-    dbgln("DeprecatedFile: looks_like_shared_library not implemented");
-    VERIFY_NOT_REACHED();
-}
+
 DeprecatedString DeprecatedFile::current_working_directory()
 {
     dbgln("DeprecatedFile: current_working_directory not implemented");
     VERIFY_NOT_REACHED();
 }
+
 DeprecatedString DeprecatedFile::absolute_path(DeprecatedString const&)
 {
     dbgln("DeprecatedFile: absolute_path not implemented");
     VERIFY_NOT_REACHED();
 }
-ErrorOr<void, DeprecatedFile::CopyError> DeprecatedFile::copy_file(DeprecatedString const&, struct stat const&, DeprecatedFile&, PreserveMode)
-{
-    dbgln("DeprecatedFile: copy_file not implemented");
-    VERIFY_NOT_REACHED();
-}
-ErrorOr<void, DeprecatedFile::CopyError> DeprecatedFile::copy_directory(DeprecatedString const&, DeprecatedString const&, struct stat const&, LinkMode, PreserveMode)
-{
-    dbgln("DeprecatedFile: copy_directory not implemented");
-    VERIFY_NOT_REACHED();
-}
-ErrorOr<void, DeprecatedFile::CopyError> DeprecatedFile::copy_file_or_directory(DeprecatedString const&, DeprecatedString const&, RecursionMode, LinkMode, AddDuplicateFileMarker, PreserveMode)
-{
-    dbgln("DeprecatedFile: copy_file_or_directory not implemented");
-    VERIFY_NOT_REACHED();
-}
 
-ErrorOr<DeprecatedString> DeprecatedFile::read_link(DeprecatedString const&)
-{
-    dbgln("DeprecatedFile: read_link not implemented");
-    VERIFY_NOT_REACHED();
-}
 [[nodiscard]] int DeprecatedFile::leak_fd()
 {
     dbgln("DeprecatedFile: leak_fd not implemented");
-    VERIFY_NOT_REACHED();
-}
-
-NonnullRefPtr<DeprecatedFile> DeprecatedFile::standard_input()
-{
-    dbgln("DeprecatedFile: standard_input not implemented");
-    VERIFY_NOT_REACHED();
-}
-NonnullRefPtr<DeprecatedFile> DeprecatedFile::standard_output()
-{
-    dbgln("DeprecatedFile: standard_output not implemented");
-    VERIFY_NOT_REACHED();
-}
-NonnullRefPtr<DeprecatedFile> DeprecatedFile::standard_error()
-{
-    dbgln("DeprecatedFile: standard_error not implemented");
     VERIFY_NOT_REACHED();
 }
 

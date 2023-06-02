@@ -10,7 +10,9 @@
 #include <AK/Error.h>
 #include <AK/RefCounted.h>
 #include <AK/RefPtr.h>
-#include <unistd.h>
+#if defined(AK_OS_WINDOWS)
+#    include <io.h>
+#endif
 
 namespace IPC {
 

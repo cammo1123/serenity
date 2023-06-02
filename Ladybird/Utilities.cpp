@@ -5,6 +5,7 @@
  */
 
 #include "Utilities.h"
+#include "AK/DeprecatedString.h"
 #include <AK/LexicalPath.h>
 #include <AK/Platform.h>
 #include <LibFileSystem/FileSystem.h>
@@ -44,7 +45,12 @@ void platform_init()
         if (source_dir) {
             return DeprecatedString::formatted("{}/Base", source_dir);
         }
+#    if defined(AK_OS_WINDOWS)
+        return DeprecatedString { "C:/Users/camer/src/serenity/Base" };
+        auto* home = getenv("USERPROFILE");
+#    else
         auto* home = getenv("XDG_CONFIG_HOME") ?: getenv("HOME");
+#    endif
         VERIFY(home);
         auto home_lagom = DeprecatedString::formatted("{}/.lagom", home);
         if (FileSystem::is_directory(home_lagom))

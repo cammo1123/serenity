@@ -17,6 +17,16 @@
 #include <LibCrypto/PK/RSA.h>
 #include <LibTLS/Extensions.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(LibTLS_EXPORTS)
+#        define LIBTLS_API __declspec(dllexport)
+#    else
+#        define LIBTLS_API __declspec(dllimport)
+#    endif
+#else
+#    define LIBTLS_API __attribute__((visibility("default")))
+#endif
+
 namespace TLS {
 
 constexpr static Array<int, 7>
@@ -298,7 +308,7 @@ public:
     static DefaultRootCACertificates& the() { return s_the; }
 
 private:
-    static Singleton<DefaultRootCACertificates> s_the;
+    LIBTLS_API static Singleton<DefaultRootCACertificates> s_the;
 
     Vector<Certificate> m_ca_certificates;
 };

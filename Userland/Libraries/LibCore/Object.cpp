@@ -205,6 +205,7 @@ bool Object::is_ancestor_of(Object const& other) const
 
 void Object::dispatch_event(Core::Event& e, Object* stay_within)
 {
+    dbgln("dispatch_event: {}({})", class_name(), this);
     VERIFY(!stay_within || stay_within == this || stay_within->is_ancestor_of(*this));
     auto* target = this;
     do {

@@ -21,7 +21,7 @@ class LexicalPath {
 public:
     explicit LexicalPath(DeprecatedString);
 
-    bool is_absolute() const { return !m_string.is_empty() && m_string[0] == '/'; }
+    bool is_absolute() const;
     DeprecatedString const& string() const { return m_string; }
 
     StringView dirname() const { return m_dirname; }

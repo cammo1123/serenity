@@ -48,11 +48,11 @@ function (generate_css_implementation)
     add_custom_command(
         OUTPUT CSS/DefaultStyleSheetSource.cpp
         COMMAND "${CMAKE_COMMAND}" -E make_directory CSS
-        COMMAND "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.sh" default_stylesheet_source "${LIBWEB_INPUT_FOLDER}/CSS/Default.css" > CSS/DefaultStyleSheetSource.cpp.tmp
+        COMMAND "python" "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.py" default_stylesheet_source "${LIBWEB_INPUT_FOLDER}/CSS/Default.css" CSS/DefaultStyleSheetSource.cpp.tmp
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different CSS/DefaultStyleSheetSource.cpp.tmp CSS/DefaultStyleSheetSource.cpp
         COMMAND "${CMAKE_COMMAND}" -E remove CSS/DefaultStyleSheetSource.cpp.tmp
         VERBATIM
-        DEPENDS "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.sh"
+        DEPENDS "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.py"
         MAIN_DEPENDENCY "${LIBWEB_INPUT_FOLDER}/CSS/Default.css"
     )
     add_custom_target(generate_DefaultStyleSheetSource.cpp DEPENDS CSS/DefaultStyleSheetSource.cpp)
@@ -61,11 +61,11 @@ function (generate_css_implementation)
     add_custom_command(
         OUTPUT CSS/QuirksModeStyleSheetSource.cpp
         COMMAND "${CMAKE_COMMAND}" -E make_directory CSS
-        COMMAND "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.sh" quirks_mode_stylesheet_source "${LIBWEB_INPUT_FOLDER}/CSS/QuirksMode.css" > CSS/QuirksModeStyleSheetSource.cpp.tmp
+        COMMAND "python" "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.py" quirks_mode_stylesheet_source "${LIBWEB_INPUT_FOLDER}/CSS/QuirksMode.css" CSS/QuirksModeStyleSheetSource.cpp.tmp
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different CSS/QuirksModeStyleSheetSource.cpp.tmp CSS/QuirksModeStyleSheetSource.cpp
         COMMAND "${CMAKE_COMMAND}" -E remove CSS/QuirksModeStyleSheetSource.cpp.tmp
         VERBATIM
-        DEPENDS "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.sh"
+        DEPENDS "${LIBWEB_INPUT_FOLDER}/Scripts/GenerateStyleSheetSource.py"
         MAIN_DEPENDENCY "${LIBWEB_INPUT_FOLDER}/CSS/Default.css"
     )
     add_custom_target(generate_QuirksModeStyleSheetSource.cpp DEPENDS CSS/QuirksModeStyleSheetSource.cpp)

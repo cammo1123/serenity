@@ -147,6 +147,16 @@
     __JS_ENUMERATE(unicode, unicode, u)          \
     __JS_ENUMERATE(sticky, sticky, y)
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(LibJS_EXPORTS)
+#        define LibJS_API __declspec(dllexport)
+#    else
+#        define LibJS_API __declspec(dllimport)
+#    endif
+#else
+#    define LibJS_API __attribute__((visibility("default")))
+#endif
+
 namespace JS {
 
 class ASTNode;

@@ -8,6 +8,15 @@
 
 #include <AK/ByteBuffer.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(BI_RGB)
+#        undef BI_RGB
+#    endif
+#    if defined(BI_BITFIELDS)
+#        undef BI_BITFIELDS
+#    endif
+#endif
+
 namespace Gfx {
 
 class Bitmap;

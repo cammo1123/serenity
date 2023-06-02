@@ -139,6 +139,8 @@ ErrorOr<Vector<String>> StandardPaths::font_directories()
         TRY("/System/Library/Fonts"_string),
         TRY("/Library/Fonts"_string),
         TRY(String::formatted("{}/Library/Fonts"sv, home_directory())),
+#elif defined(AK_OS_WINDOWS)
+        TRY("C:\\Windows\\Fonts"_string),
 #else
         TRY("/usr/share/fonts"_string),
         TRY("/usr/local/share/fonts"_string),

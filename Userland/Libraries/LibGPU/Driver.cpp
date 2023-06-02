@@ -8,7 +8,9 @@
 #include <AK/HashMap.h>
 #include <AK/WeakPtr.h>
 #include <LibGPU/Driver.h>
-#include <dlfcn.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <dlfcn.h>
+#endif
 
 namespace GPU {
 
@@ -41,15 +43,27 @@ ErrorOr<NonnullRefPtr<Driver>> Driver::try_create(StringView driver_name)
     if (it == s_driver_path_map.end())
         return Error::from_string_literal("The requested GPU driver was not found in the list of allowed driver libraries");
 
+#if defined(AK_OS_WINDOWS)
+    auto lib = LoadLibraryA(it->value);
+#else
     auto lib = dlopen(it->value, RTLD_NOW);
+#endif
     if (!lib)
         return Error::from_string_literal("The library for the requested GPU driver could not be opened");
 
+#if defined(AK_OS_WINDOWS)
+    auto serenity_gpu_create_device = reinterpret_cast<serenity_gpu_create_device_t>(GetProcAddress(lib, "serenity_gpu_create_device"));
+    if (!serenity_gpu_create_device) {
+        FreeLibrary(lib);
+        return Error::from_string_literal("The library for the requested GPU driver does not contain serenity_gpu_create_device()");
+    }
+#else
     auto serenity_gpu_create_device = reinterpret_cast<serenity_gpu_create_device_t>(dlsym(lib, "serenity_gpu_create_device"));
     if (!serenity_gpu_create_device) {
         dlclose(lib);
         return Error::from_string_literal("The library for the requested GPU driver does not contain serenity_gpu_create_device()");
     }
+#endif
 
     auto driver = adopt_ref(*new Driver(lib, serenity_gpu_create_device));
 
@@ -60,7 +74,11 @@ ErrorOr<NonnullRefPtr<Driver>> Driver::try_create(StringView driver_name)
 
 Driver::~Driver()
 {
+#if defined(AK_OS_WINDOWS)
+    FreeLibrary(m_dlopen_result);
+#else
     dlclose(m_dlopen_result);
+#endif
 }
 
 ErrorOr<NonnullOwnPtr<Device>> Driver::try_create_device(Gfx::IntSize size)

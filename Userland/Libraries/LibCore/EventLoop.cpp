@@ -9,10 +9,14 @@
 #include <AK/Badge.h>
 #include <LibCore/Event.h>
 #include <LibCore/EventLoop.h>
-#include <LibCore/EventLoopImplementationUnix.h>
 #include <LibCore/Object.h>
 #include <LibCore/Promise.h>
 #include <LibCore/ThreadEventQueue.h>
+#if defined(AK_OS_WINDOWS)
+#    include <LibCore/EventLoopImplementationWindows.h>
+#else
+#    include <LibCore/EventLoopImplementationUnix.h>
+#endif
 
 namespace Core {
 

@@ -28,7 +28,7 @@ enum class RecordType : u16 {
 };
 
 enum class RecordClass : u16 {
-    IN = 1
+    _IN = 1
 };
 
 #define MDNS_CACHE_FLUSH 0x8000
@@ -101,3 +101,8 @@ template<>
 ErrorOr<DNS::Answer> decode(Decoder&);
 
 }
+
+#if defined(AK_OS_WINDOWS) && defined(_IN_DEFINED)
+#    undef IN
+#    define IN 0x0001
+#endif

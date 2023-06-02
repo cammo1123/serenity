@@ -7,8 +7,22 @@
 #include <AK/Types.h>
 #include <LibCompress/BrotliDictionary.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(LibCompress_EXPORTS)
+#        define LIBCOMPRESS_API __declspec(dllexport)
+#    else
+#        define LIBCOMPRESS_API __declspec(dllimport)
+#    endif
+#else
+#    define LIBCOMPRESS_API __attribute__((visibility("default")))
+#endif
+
 // Include the 119.9 KiB of dictionary data from a binary file
+#if defined(AK_OS_WINDOWS)
+LIBCOMPRESS_API extern "C" u8 const brotli_dictionary_data[];
+#else
 extern u8 const brotli_dictionary_data[];
+#endif
 #if defined(AK_OS_MACOS)
 asm(".const_data\n"
     ".globl _brotli_dictionary_data\n"

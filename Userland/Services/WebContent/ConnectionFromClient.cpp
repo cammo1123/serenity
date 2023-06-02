@@ -36,7 +36,9 @@
 #include <WebContent/ConnectionFromClient.h>
 #include <WebContent/PageHost.h>
 #include <WebContent/WebContentClientEndpoint.h>
-#include <pthread.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <pthread.h>
+#endif
 
 namespace WebContent {
 

@@ -13,6 +13,12 @@
 #include <AK/Types.h>
 #include <AK/Vector.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(NOERROR)
+#        undef NOERROR
+#    endif
+#endif
+
 namespace DNS {
 
 enum class ShouldRandomizeCase {

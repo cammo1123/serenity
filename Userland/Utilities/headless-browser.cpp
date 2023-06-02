@@ -43,6 +43,9 @@
 #    include <Ladybird/HelperProcess.h>
 #    include <QCoreApplication>
 #endif
+#if defined(AK_OS_WINDOWS)
+#    define STDOUT_FILENO _fileno(stdout)
+#endif
 
 class HeadlessWebContentView final : public WebView::ViewImplementation {
 public:

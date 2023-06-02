@@ -6,6 +6,7 @@
 
 #include "Language.h"
 #include <AK/LexicalPath.h>
+#include <AK/StringView.h>
 #include <LibGUI/TextEditor.h>
 #include <LibSyntax/Highlighter.h>
 

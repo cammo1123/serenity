@@ -21,6 +21,11 @@
 #include <LibJS/Runtime/Value.h>
 #include <LibJS/Runtime/ValueTraits.h>
 
+// Windows defines Yield, which conflicts with the Yield instruction. So we need to undefine it.
+#ifdef Yield
+#    undef Yield
+#endif
+
 namespace JS::Bytecode::Op {
 
 class Load final : public Instruction {

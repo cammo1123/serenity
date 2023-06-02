@@ -5,11 +5,17 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Format.h"
 #include <LibCore/System.h>
 #include <LibIPC/Connection.h>
 #include <LibIPC/Stub.h>
-#include <sched.h>
-#include <sys/select.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <sched.h>
+#    include <sys/select.h>
+#else
+#    include <winsock2.h>
+#endif
 
 namespace IPC {
 
@@ -33,16 +39,19 @@ ConnectionBase::ConnectionBase(IPC::Stub& local_stub, NonnullOwnPtr<Core::LocalS
 
 void ConnectionBase::set_deferred_invoker(NonnullOwnPtr<DeferredInvoker> deferred_invoker)
 {
+    dbgln("ConnectionBase::set_deferred_invoker");
     m_deferred_invoker = move(deferred_invoker);
 }
 
 void ConnectionBase::set_fd_passing_socket(NonnullOwnPtr<Core::LocalSocket> socket)
 {
+    dbgln("ConnectionBase::set_fd_passing_socket");
     m_fd_passing_socket = move(socket);
 }
 
 Core::LocalSocket& ConnectionBase::fd_passing_socket()
 {
+    dbgln("ConnectionBase::fd_passing_socket");
     if (m_fd_passing_socket)
         return *m_fd_passing_socket;
     return *m_socket;
@@ -50,11 +59,13 @@ Core::LocalSocket& ConnectionBase::fd_passing_socket()
 
 ErrorOr<void> ConnectionBase::post_message(Message const& message)
 {
+    dbgln("ConnectionBase::post_message(MESSAGE)");
     return post_message(TRY(message.encode()));
 }
 
 ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
 {
+    dbgln("ConnectionBase::post_message(BUFFER)");
     // NOTE: If this connection is being shut down, but has not yet been destroyed,
     //       the socket will be closed. Don't try to send more messages.
     if (!m_socket->is_open())
@@ -83,7 +94,11 @@ ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
                 // FIXME: This is a hacky way to at least not crash on large messages
                 // The limit of 100 writes is arbitrary, and there to prevent indefinite spinning on the EventLoop
                 if (error.code() == EAGAIN && writes_done < 100) {
+#if defined(AK_OS_WINDOWS)
+                    SwitchToThread();
+#else
                     sched_yield();
+#endif
                     continue;
                 }
                 shutdown_with_error(error);
@@ -112,6 +127,7 @@ ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
 
 void ConnectionBase::shutdown()
 {
+    dbgln("IPC::ConnectionBase ({:p}) shutting down.", this);
     m_socket->close();
     die();
 }
@@ -124,6 +140,7 @@ void ConnectionBase::shutdown_with_error(Error const& error)
 
 void ConnectionBase::handle_messages()
 {
+    dbgln("IPC::ConnectionBase::handle_messages: Handling messages...");
     auto messages = move(m_unprocessed_messages);
     for (auto& message : messages) {
         if (message->endpoint_magic() == m_local_endpoint_magic) {
@@ -144,6 +161,7 @@ void ConnectionBase::handle_messages()
 
 void ConnectionBase::wait_for_socket_to_become_readable()
 {
+    dbgln("ConnectionBase::wait_for_socket_to_become_readable: Waiting for socket to become readable...");
     auto maybe_did_become_readable = m_socket->can_read_without_blocking(-1);
     if (maybe_did_become_readable.is_error()) {
         dbgln("ConnectionBase::wait_for_socket_to_become_readable: {}", maybe_did_become_readable.error());
@@ -156,6 +174,7 @@ void ConnectionBase::wait_for_socket_to_become_readable()
 
 ErrorOr<Vector<u8>> ConnectionBase::read_as_much_as_possible_from_socket_without_blocking()
 {
+    dbgln("ConnectionBase::read_as_much_as_possible_from_socket_without_blocking: Reading as much as possible from socket without blocking...");
     Vector<u8> bytes;
 
     if (!m_unprocessed_bytes.is_empty()) {
@@ -212,6 +231,7 @@ ErrorOr<Vector<u8>> ConnectionBase::read_as_much_as_possible_from_socket_without
 
 ErrorOr<void> ConnectionBase::drain_messages_from_peer()
 {
+    dbgln("ConnectionBase::drain_messages_from_peer: Draining messages from peer...");
     auto bytes = TRY(read_as_much_as_possible_from_socket_without_blocking());
 
     size_t index = 0;
@@ -239,6 +259,7 @@ ErrorOr<void> ConnectionBase::drain_messages_from_peer()
 
 OwnPtr<IPC::Message> ConnectionBase::wait_for_specific_endpoint_message_impl(u32 endpoint_magic, int message_id)
 {
+    dbgln("ConnectionBase::wait_for_specific_endpoint_message_impl: Waiting for specific endpoint message...");
     for (;;) {
         // Double check we don't already have the event waiting for us.
         // Otherwise we might end up blocked for a while for no reason.

@@ -93,7 +93,11 @@ ErrorOr<URL> decode(Decoder& decoder)
 template<>
 ErrorOr<File> decode(Decoder& decoder)
 {
+#if defined(AK_OS_WINDOWS)
+    int fd = TRY(decoder.socket().receive_fd(0));
+#else
     int fd = TRY(decoder.socket().receive_fd(O_CLOEXEC));
+#endif
     return File { fd, File::ConstructWithReceivedFileDescriptor };
 }
 
@@ -109,10 +113,18 @@ ErrorOr<Core::AnonymousBuffer> decode(Decoder& decoder)
     if (auto valid = TRY(decoder.decode<bool>()); !valid)
         return Core::AnonymousBuffer {};
 
+#if defined(AK_OS_WINDOWS)
+    auto *handle = (HANDLE) TRY(decoder.decode<uintptr_t>());
+    auto size = TRY(decoder.decode<size_t>());
+
+    dbgln("Creating anonymous buffer from anon file handle: {} size: {}", handle, size);
+    return Core::AnonymousBuffer::create_from_anon_handle(handle, size);
+#else
     auto size = TRY(decoder.decode_size());
     auto anon_file = TRY(decoder.decode<IPC::File>());
 
     return Core::AnonymousBuffer::create_from_anon_fd(anon_file.take_fd(), size);
+#endif
 }
 
 template<>

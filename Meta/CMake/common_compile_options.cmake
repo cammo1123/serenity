@@ -6,6 +6,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if (WIN32)
     # -Wall with clang-cl is equivalent to -Weverything, which is extremely noisy
     add_compile_options(-Wno-unknown-attributes) # [[no_unique_address]] is broken in MSVC ABI until next ABI break
+    add_compile_options(-Wno-reinterpret-base-class)
+    add_compile_options(-Wno-microsoft-unqualified-friend) # MSVC doesn't support unqualified friends
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS) # _s replacements not desired (or implemented on any other platform other than VxWorks)
     add_compile_definitions(_CRT_NONSTDC_NO_WARNINGS) # POSIX names are just fine, thanks
     add_compile_definitions(_USE_MATH_DEFINES)

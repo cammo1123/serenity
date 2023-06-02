@@ -176,6 +176,15 @@ void ViewImplementation::handle_resize()
 
 ErrorOr<NonnullRefPtr<WebView::WebContentClient>> ViewImplementation::launch_web_content_process(ReadonlySpan<String> candidate_web_content_paths, EnableCallgrindProfiling enable_callgrind_profiling, IsLayoutTestMode is_layout_test_mode)
 {
+#    if defined(AK_OS_WINDOWS)
+    dbgln("Launching WebContent process with {} candidate paths, callgrind profiling {}, layout test mode {}", candidate_web_content_paths.size(), enable_callgrind_profiling == EnableCallgrindProfiling::Yes, is_layout_test_mode == IsLayoutTestMode::Yes);
+    auto socket = TRY(Core::LocalSocket::adopt_fd(0));
+    TRY(socket->set_blocking(true));
+
+    auto new_client = TRY(adopt_nonnull_ref_or_enomem(new (nothrow) WebView::WebContentClient(move(socket), *this)));
+    new_client->set_fd_passing_socket(TRY(Core::LocalSocket::adopt_fd(1)));
+    return new_client;
+#    else
     int socket_fds[2] {};
     TRY(Core::System::socketpair(AF_LOCAL, SOCK_STREAM, 0, socket_fds));
 
@@ -240,6 +249,7 @@ ErrorOr<NonnullRefPtr<WebView::WebContentClient>> ViewImplementation::launch_web
     }
 
     return new_client;
+#    endif
 }
 
 #endif

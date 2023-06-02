@@ -29,7 +29,6 @@
 #include <QSvgRenderer>
 
 extern DeprecatedString s_serenity_resource_root;
-extern Browser::Settings* s_settings;
 
 static QIcon render_svg_icon_with_theme_colors(QString name, QPalette const& palette)
 {

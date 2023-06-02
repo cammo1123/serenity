@@ -6,17 +6,17 @@
 
 #pragma once
 
+#include <AK/Time.h>
 #include <LibCore/EventLoopImplementation.h>
+#include <windows.h>
 
 namespace Core {
 
-class EventLoopManagerUnix final : public EventLoopManager {
+class EventLoopManagerWindows final : public EventLoopManager {
 public:
-    virtual ~EventLoopManagerUnix() override;
+    virtual ~EventLoopManagerWindows() override;
 
     virtual NonnullOwnPtr<EventLoopImplementation> make_implementation() override;
-
-    virtual void deferred_invoke(Function<void()>) override;
 
     virtual int register_timer(Object&, int milliseconds, bool should_reload, TimerShouldFireWhenNotVisible) override;
     virtual bool unregister_timer(int timer_id) override;
@@ -29,22 +29,20 @@ public:
     virtual int register_signal(int signal_number, Function<void(int)> handler) override;
     virtual void unregister_signal(int handler_id) override;
 
-    virtual void wake() override;
-
     void wait_for_events(EventLoopImplementation::PumpMode);
-    static Optional<Time> get_next_timer_expiration();
+    static Optional<MonotonicTime> get_next_timer_expiration();
 
 private:
     void dispatch_signal(int signal_number);
     static void handle_signal(int signal_number);
 };
 
-class EventLoopImplementationUnix final : public EventLoopImplementation {
+class EventLoopImplementationWindows final : public EventLoopImplementation {
 public:
-    static NonnullOwnPtr<EventLoopImplementationUnix> create() { return make<EventLoopImplementationUnix>(); }
+    static NonnullOwnPtr<EventLoopImplementationWindows> create() { return make<EventLoopImplementationWindows>(); }
 
-    EventLoopImplementationUnix();
-    virtual ~EventLoopImplementationUnix();
+    EventLoopImplementationWindows();
+    virtual ~EventLoopImplementationWindows();
 
     virtual int exec() override;
     virtual size_t pump(PumpMode) override;
@@ -55,13 +53,15 @@ public:
     virtual void unquit() override;
     virtual bool was_exit_requested() const override;
     virtual void notify_forked_and_in_child() override;
+    virtual void post_event(Object& receiver, NonnullOwnPtr<Event>&&) override;
 
 private:
     bool m_exit_requested { false };
     int m_exit_code { 0 };
 
     // The wake pipe of this event loop needs to be accessible from other threads.
-    int (*m_wake_pipe_fds)[2];
+    HANDLE m_wake_pipe_read_handle { INVALID_HANDLE_VALUE };
+    HANDLE m_wake_pipe_write_handle { INVALID_HANDLE_VALUE };
 };
 
 }

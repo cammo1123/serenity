@@ -14,6 +14,16 @@
 #include <AK/Vector.h>
 #include <LibTest/TestCase.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(LibTest_EXPORTS)
+#        define LIBTEST_EXPORT __declspec(dllexport)
+#    else
+#        define LIBTEST_EXPORT __declspec(dllimport)
+#    endif
+#else
+#    define LIBTEST_EXPORT [[gnu::visibility("default")]]
+#endif
+
 namespace Test {
 
 class TestSuite {
@@ -45,7 +55,7 @@ public:
     void set_suite_setup(Function<void()> setup) { m_setup = move(setup); }
 
 private:
-    static TestSuite* s_global;
+    LIBTEST_EXPORT static TestSuite* s_global;
     Vector<NonnullRefPtr<TestCase>> m_cases;
     u64 m_testtime = 0;
     u64 m_benchtime = 0;

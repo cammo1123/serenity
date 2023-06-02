@@ -54,7 +54,11 @@ ErrorOr<void> munmap(void* address, [[maybe_unused]] size_t size)
 
 ErrorOr<int> open(StringView path, int options, mode_t mode)
 {
-    return openat(-100, path, options, mode);
+    DeprecatedString string_path = path;
+    auto rc = _open(string_path.characters(), options, mode);
+    if (rc < 0)
+        return Error::from_syscall("open"sv, -errno);
+    return rc;
 }
 
 ErrorOr<AddressInfoVector> getaddrinfo(char const* nodename, char const* servname, struct addrinfo const& hints)
@@ -90,6 +94,46 @@ ErrorOr<DeprecatedString> getcwd()
     return string_cwd;
 }
 
+ErrorOr<void> exec(StringView filename, ReadonlySpan<StringView> arguments, SearchInPath search_in_path, Optional<ReadonlySpan<StringView>> environment)
+{
+    DeprecatedString filename_string { filename };
+
+    auto argument_strings = TRY(FixedArray<DeprecatedString>::create(arguments.size()));
+    auto argv = TRY(FixedArray<char*>::create(arguments.size() + 1));
+    for (size_t i = 0; i < arguments.size(); ++i) {
+        argument_strings[i] = arguments[i].to_deprecated_string();
+        argv[i] = const_cast<char*>(argument_strings[i].characters());
+    }
+    argv[arguments.size()] = nullptr;
+
+    int rc = 0;
+    if (environment.has_value()) {
+        auto environment_strings = TRY(FixedArray<DeprecatedString>::create(environment->size()));
+        auto envp = TRY(FixedArray<char*>::create(environment->size() + 1));
+        for (size_t i = 0; i < environment->size(); ++i) {
+            environment_strings[i] = environment->at(i).to_deprecated_string();
+            envp[i] = const_cast<char*>(environment_strings[i].characters());
+        }
+        envp[environment->size()] = nullptr;
+
+        if (search_in_path == SearchInPath::Yes && !filename.contains('/')) {
+            rc = ::execvpe(filename_string.characters(), argv.data(), envp.data());
+        } else {
+            rc = ::execve(filename_string.characters(), argv.data(), envp.data());
+        }
+
+    } else {
+        if (search_in_path == SearchInPath::Yes)
+            rc = ::execvp(filename_string.characters(), argv.data());
+        else
+            rc = ::execv(filename_string.characters(), argv.data());
+    }
+
+    if (rc < 0)
+        return Error::from_syscall("exec"sv, rc);
+    VERIFY_NOT_REACHED();
+}
+
 ErrorOr<void> link(StringView old_path, StringView new_path)
 {
     DeprecatedString old_path_string = old_path;
@@ -116,12 +160,19 @@ ErrorOr<void> rmdir(StringView path)
     return {};
 }
 
-ErrorOr<void> access(StringView pathname, int mode)
+ErrorOr<int> anon_create([[maybe_unused]] size_t size, [[maybe_unused]] int options)
+{
+    dbgln("Core::System::anon_create: Implement me!");
+    VERIFY_NOT_REACHED();
+}
+
+ErrorOr<void> access(StringView pathname, int mode, int flags)
 {
     if (pathname.is_null())
         return Error::from_syscall("access"sv, -EFAULT);
 
     DeprecatedString path_string = pathname;
+    (void)flags;
     if (::access(path_string.characters(), mode) < 0)
         return Error::from_syscall("access"sv, -errno);
     return {};
@@ -135,6 +186,12 @@ ErrorOr<void> chmod(StringView pathname, mode_t mode)
     DeprecatedString path = pathname;
     if (::chmod(path.characters(), mode) < 0)
         return Error::from_syscall("chmod"sv, -errno);
+    return {};
+}
+
+ErrorOr<void> fchmod(int fd, mode_t mode)
+{
+    dbgln("Core::System::fchmod({}, {:#04o}) is not implemented", fd, mode);
     return {};
 }
 
@@ -184,7 +241,8 @@ ErrorOr<int> openat(int fd, StringView path, int options, mode_t mode)
 
 ErrorOr<void> close(int fd)
 {
-    _close(fd);
+    if (::close(fd) < 0)
+        return Error::from_syscall("close"sv, -errno);
     return {};
 }
 
@@ -269,46 +327,21 @@ ErrorOr<void> adjtime(const struct timeval* delta, struct timeval* old_delta)
     VERIFY_NOT_REACHED();
 }
 
-ErrorOr<void> exec(StringView filename, ReadonlySpan<StringView> arguments, SearchInPath search_in_path, Optional<ReadonlySpan<StringView>> environment)
+ErrorOr<struct stat> lstat(StringView path)
 {
-    DeprecatedString filename_string { filename };
-
-    auto argument_strings = TRY(FixedArray<DeprecatedString>::create(arguments.size()));
-    auto argv = TRY(FixedArray<char*>::create(arguments.size() + 1));
-    for (size_t i = 0; i < arguments.size(); ++i) {
-        argument_strings[i] = arguments[i].to_deprecated_string();
-        dbgln("argv[{}]: {}", i, argument_strings[i]);
-        argv[i] = const_cast<char*>(argument_strings[i].characters());
-    }
-    argv[arguments.size()] = nullptr;
-
-    int rc = 0;
-    if (environment.has_value()) {
-        auto environment_strings = TRY(FixedArray<DeprecatedString>::create(environment->size()));
-        auto envp = TRY(FixedArray<char*>::create(environment->size() + 1));
-        for (size_t i = 0; i < environment->size(); ++i) {
-            environment_strings[i] = environment->at(i).to_deprecated_string();
-            envp[i] = const_cast<char*>(environment_strings[i].characters());
-        }
-        envp[environment->size()] = nullptr;
-
-        if (search_in_path == SearchInPath::Yes && !filename.contains('/')) {
-            rc = ::_execvpe(filename_string.characters(), argv.data(), envp.data());
-        } else {
-            rc = ::execve(filename_string.characters(), argv.data(), envp.data());
-        }
-
-    } else {
-        if (search_in_path == SearchInPath::Yes) {
-            rc = ::execvp(filename_string.characters(), argv.data());
-        } else {
-            rc = ::execv(filename_string.characters(), argv.data());
-        }
-    }
-
-    if (rc < 0)
-        return Error::from_syscall("exec"sv, rc);
+    dbgln("FIXME: Implement lstat({})", path);
     VERIFY_NOT_REACHED();
+}
+
+ErrorOr<void> chdir(StringView path)
+{
+    if (path.is_null())
+        return Error::from_errno(EFAULT);
+
+    DeprecatedString path_string = path;
+    if (::chdir(path_string.characters()) < 0)
+        return Error::from_syscall("chdir"sv, -errno);
+    return {};
 }
 
 ErrorOr<int> socket(int domain, int type, int protocol)

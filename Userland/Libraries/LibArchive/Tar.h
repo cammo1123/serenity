@@ -13,6 +13,11 @@
 #include <string.h>
 #include <sys/types.h>
 
+#if defined(AK_OS_WINDOWS)
+typedef int uid_t;
+typedef int gid_t;
+#endif
+
 // glibc before 2.28 defines these from sys/types.h, but we don't want
 // TarFileHeader::major() and TarFileHeader::minor() to use those macros
 #ifdef minor

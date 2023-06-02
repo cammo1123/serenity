@@ -36,9 +36,11 @@ ErrorOr<void> Heap::open()
             warnln("Heap::open({}): could not stat: {}"sv, name(), strerror(errno));
             return Error::from_string_literal("Heap::open(): could not stat file");
         }
+#if !defined(AK_OS_WINDOWS)
     } else if (!S_ISREG(stat_buffer.st_mode)) {
         warnln("Heap::open({}): can only use regular files"sv, name());
         return Error::from_string_literal("Heap::open(): can only use regular files");
+#endif
     } else {
         file_size = stat_buffer.st_size;
     }

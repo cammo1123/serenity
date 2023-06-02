@@ -177,6 +177,7 @@ struct Trap {
     DeprecatedString reason;
 };
 
+class Result;
 // A variant of Result that does not include external reasons for error (JS::Completion, for now).
 class PureResult {
 public:

@@ -20,7 +20,9 @@
 #include <LibGfx/ImageFormats/PNGLoader.h>
 #include <LibTextCodec/Decoder.h>
 #include <math.h>
-#include <sys/mman.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/mman.h>
+#endif
 
 namespace OpenType {
 

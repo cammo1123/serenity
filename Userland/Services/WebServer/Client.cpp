@@ -18,6 +18,7 @@
 #include <LibCore/File.h>
 #include <LibCore/MappedFile.h>
 #include <LibCore/MimeData.h>
+#include <LibCore/System.h>
 #include <LibFileSystem/FileSystem.h>
 #include <LibHTTP/HttpRequest.h>
 #include <LibHTTP/HttpResponse.h>
@@ -25,7 +26,6 @@
 #include <WebServer/Configuration.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include <unistd.h>
 
 namespace WebServer {
 
@@ -289,14 +289,8 @@ ErrorOr<void> Client::handle_directory_listing(String const& requested_path, Str
         else
             TRY(path_builder.try_append(name));
 
-        struct stat st;
-        memset(&st, 0, sizeof(st));
-        int rc = stat(path_builder.to_deprecated_string().characters(), &st);
-        if (rc < 0) {
-            perror("stat");
-        }
-
-        bool is_directory = S_ISDIR(st.st_mode);
+        bool is_directory = FileSystem::is_directory(path_builder.to_deprecated_string());
+        auto st = TRY(Core::System::stat(path_builder.to_deprecated_string()));
 
         TRY(builder.try_append("<tr>"sv));
         TRY(builder.try_appendff("<td><div class=\"{}\"></div></td>", is_directory ? "folder" : "file"));

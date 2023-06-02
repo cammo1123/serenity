@@ -17,7 +17,6 @@
 #include <LibSQL/AST/Lexer.h>
 #include <LibSQL/AST/Token.h>
 #include <LibSQL/SQLClient.h>
-#include <unistd.h>
 
 class SQLRepl {
 public:

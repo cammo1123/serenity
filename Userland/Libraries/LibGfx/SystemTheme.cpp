@@ -48,6 +48,8 @@ ErrorOr<Core::AnonymousBuffer> load_system_theme(Core::ConfigFile const& file, O
 
     auto get_color = [&](auto& name) -> Optional<Color> {
         auto color_string = file.read_entry("Colors", name);
+        if (color_string.is_empty())
+            return OptionalNone {};
         auto color = Color::from_string(color_string);
         if (color_scheme.has_value() && color_scheme.value() == "Custom"sv)
             return color;

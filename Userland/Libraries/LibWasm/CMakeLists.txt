@@ -5,9 +5,12 @@ set(SOURCES
     AbstractMachine/Validator.cpp
     Parser/Parser.cpp
     Printer/Printer.cpp
-    WASI/Wasi.cpp
-)
+    )
 
+if (NOT WIN32)
+    set(SOURCES ${SOURCES} WASI/Wasi.cpp)
+endif()
+    
 serenity_lib(LibWasm wasm)
 target_link_libraries(LibWasm PRIVATE LibCore LibJS)
 

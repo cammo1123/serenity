@@ -12,12 +12,16 @@
 #include <LibCore/SystemServerTakeover.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/socket.h>
+#    include <sys/stat.h>
+#    include <unistd.h>
 
-#ifndef SOCK_NONBLOCK
-#    include <sys/ioctl.h>
+#    ifndef SOCK_NONBLOCK
+#        include <sys/ioctl.h>
+#    endif
+#else
+#    include <io.h>
 #endif
 
 namespace Core {
@@ -35,6 +39,10 @@ LocalServer::~LocalServer()
 
 ErrorOr<void> LocalServer::take_over_from_system_server(DeprecatedString const& socket_path)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("Core::LocalServer({}): Socket takeover is not supported on Windows", socket_path);
+    VERIFY_NOT_REACHED();
+#else
     if (m_listening)
         return Error::from_string_literal("Core::LocalServer: Can't perform socket takeover when already listening");
 
@@ -45,6 +53,7 @@ ErrorOr<void> LocalServer::take_over_from_system_server(DeprecatedString const& 
     m_listening = true;
     setup_notifier();
     return {};
+#endif
 }
 
 void LocalServer::setup_notifier()
@@ -67,27 +76,31 @@ void LocalServer::setup_notifier()
 
 bool LocalServer::listen(DeprecatedString const& address)
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("Core::LocalServer({}): Socket takeover is not supported on Windows", address);
+    VERIFY_NOT_REACHED();
+#else
     if (m_listening)
         return false;
 
     int rc;
 
-#ifdef SOCK_NONBLOCK
+#    ifdef SOCK_NONBLOCK
     m_fd = socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
-#else
+#    else
     m_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
     int option = 1;
     ioctl(m_fd, FIONBIO, &option);
     fcntl(m_fd, F_SETFD, FD_CLOEXEC);
-#endif
+#    endif
     VERIFY(m_fd >= 0);
-#ifndef AK_OS_MACOS
+#    ifndef AK_OS_MACOS
     rc = fchmod(m_fd, 0600);
     if (rc < 0) {
         perror("fchmod");
         VERIFY_NOT_REACHED();
     }
-#endif
+#    endif
 
     auto socket_address = SocketAddress::local(address);
     auto un_optional = socket_address.to_sockaddr_un();
@@ -111,6 +124,7 @@ bool LocalServer::listen(DeprecatedString const& address)
     m_listening = true;
     setup_notifier();
     return true;
+#endif
 }
 
 ErrorOr<NonnullOwnPtr<LocalSocket>> LocalServer::accept()
@@ -118,7 +132,7 @@ ErrorOr<NonnullOwnPtr<LocalSocket>> LocalServer::accept()
     VERIFY(m_listening);
     sockaddr_un un;
     socklen_t un_size = sizeof(un);
-#ifndef AK_OS_MACOS
+#if !defined(AK_OS_MACOS) && !defined(AK_OS_WINDOWS)
     int accepted_fd = ::accept4(m_fd, (sockaddr*)&un, &un_size, SOCK_NONBLOCK | SOCK_CLOEXEC);
 #else
     int accepted_fd = ::accept(m_fd, (sockaddr*)&un, &un_size);

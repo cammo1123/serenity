@@ -7,7 +7,6 @@
 #include "BrowserWindow.h"
 #include "EventLoopImplementationQt.h"
 #include "HelperProcess.h"
-#include "Settings.h"
 #include "Utilities.h"
 #include "WebContentView.h"
 #include <AK/OwnPtr.h>
@@ -21,8 +20,6 @@
 #include <LibMain/Main.h>
 #include <LibSQL/SQLClient.h>
 #include <QApplication>
-
-AK::OwnPtr<Browser::Settings> s_settings;
 
 static ErrorOr<void> handle_attached_debugger()
 {
@@ -98,7 +95,6 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     auto cookie_jar = database ? TRY(Browser::CookieJar::create(*database)) : Browser::CookieJar::create();
 
-    s_settings = adopt_own_if_nonnull(new Browser::Settings());
     BrowserWindow window(cookie_jar, webdriver_content_ipc_path, enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No);
     window.setWindowTitle("Ladybird");
     window.resize(800, 600);

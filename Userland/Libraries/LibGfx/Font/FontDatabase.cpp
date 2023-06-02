@@ -32,7 +32,11 @@ static DeprecatedString s_window_title_font_query;
 static RefPtr<Font> s_fixed_width_font;
 static DeprecatedString s_fixed_width_font_query;
 
+#if defined(AK_OS_WINDOWS)
+static DeprecatedString s_default_fonts_lookup_path = "C:/Windows/Fonts";
+#else
 static DeprecatedString s_default_fonts_lookup_path = "/res/fonts";
+#endif
 
 void FontDatabase::set_default_font_query(DeprecatedString query)
 {
@@ -124,6 +128,7 @@ void FontDatabase::load_all_fonts_from_path(DeprecatedString const& root)
 {
     Queue<DeprecatedString> path_queue;
     path_queue.enqueue(root);
+    dbgln("FontDatabase::load_all_fonts_from_path: Enqueued root {}", root);
 
     while (!path_queue.is_empty()) {
         auto current_directory = path_queue.dequeue();

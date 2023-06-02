@@ -54,7 +54,11 @@ ErrorOr<time_t> parse_date_time_number(DateTimeNumber const& date_time)
     tm.tm_sec = date_time.seconds;
     // timegm() doesn't read tm.tm_isdst, tm.tm_wday, and tm.tm_yday, no need to fill them in.
 
+#if defined(AK_OS_WINDOWS)
+    time_t timestamp = _mkgmtime(&tm);
+#else
     time_t timestamp = timegm(&tm);
+#endif
     if (timestamp == -1)
         return Error::from_string_literal("ICC::Profile: dateTimeNumber not representable as timestamp");
 

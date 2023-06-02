@@ -9,7 +9,13 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
-#include <unistd.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <unistd.h>
+#else
+#    include <io.h>
+#    include <winsock2.h>
+#endif
 
 namespace RequestServer {
 
@@ -37,6 +43,10 @@ Protocol::~Protocol()
 
 ErrorOr<Protocol::Pipe> Protocol::get_pipe_for_request()
 {
+#if defined(AK_OS_WINDOWS)
+    dbgln("Protocol: get_pipe_for_request() is not supported on Windows");
+    VERIFY_NOT_REACHED();
+#else
     int fd_pair[2] { 0 };
     if (pipe(fd_pair) != 0) {
         auto saved_errno = errno;
@@ -45,6 +55,7 @@ ErrorOr<Protocol::Pipe> Protocol::get_pipe_for_request()
     }
     fcntl(fd_pair[1], F_SETFL, fcntl(fd_pair[1], F_GETFL) | O_NONBLOCK);
     return Pipe { fd_pair[0], fd_pair[1] };
+#endif
 }
 
 }

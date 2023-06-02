@@ -11,6 +11,17 @@
 #include <AK/Forward.h>
 #include <AK/Span.h>
 
+#if defined(AK_OS_WINDOWS)
+typedef int pid_t;
+#    if defined(LibCore_EXPORTS)
+#        define LIBCORE_API __declspec(dllexport)
+#    else
+#        define LIBCORE_API __declspec(dllimport)
+#    endif
+#else
+#    define LIBCORE_API [[gnu::visibility("default")]]
+#endif
+
 namespace Core {
 
 class Process {
@@ -20,9 +31,9 @@ public:
         No
     };
 
-    static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<DeprecatedString> arguments, DeprecatedString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
-    static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<StringView> arguments, DeprecatedString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
-    static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<char const*> arguments = {}, DeprecatedString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
+    LIBCORE_API static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<DeprecatedString> arguments, DeprecatedString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
+    LIBCORE_API static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<StringView> arguments, DeprecatedString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
+    LIBCORE_API static ErrorOr<pid_t> spawn(StringView path, ReadonlySpan<char const*> arguments = {}, DeprecatedString working_directory = {}, KeepAsChild keep_as_child = KeepAsChild::No);
 
     static ErrorOr<String> get_name();
     enum class SetThreadName {

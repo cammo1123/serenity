@@ -13,11 +13,15 @@
 #include <LibWasm/AbstractMachine/Interpreter.h>
 #include <LibWasm/Printer/Printer.h>
 #include <LibWasm/Wasi.h>
-#include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <time.h>
+#if !defined(AK_OS_WINDOWS)
 #include <unistd.h>
+#    include <dirent.h>
+#else
+#    include <io.h>
+#endif
 
 namespace Wasm::Wasi::ABI {
 

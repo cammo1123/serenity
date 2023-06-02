@@ -149,8 +149,8 @@ enum class PropertyID {
 };
 
 Optional<PropertyID> property_id_from_camel_case_string(StringView);
-Optional<PropertyID> property_id_from_string(StringView);
-StringView string_from_property_id(PropertyID);
+LibWeb_API Optional<PropertyID> property_id_from_string(StringView);
+LibWeb_API StringView string_from_property_id(PropertyID);
 bool is_inherited_property(PropertyID);
 ErrorOr<NonnullRefPtr<StyleValue>> property_initial_value(JS::Realm&, PropertyID);
 

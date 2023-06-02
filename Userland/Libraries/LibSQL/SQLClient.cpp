@@ -31,11 +31,13 @@ static ErrorOr<int> create_database_socket(DeprecatedString const& socket_path)
 #    ifdef SOCK_NONBLOCK
     auto socket_fd = TRY(Core::System::socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0));
 #    else
-    auto socket_fd = TRY(Core::System::socket(AF_LOCAL, SOCK_STREAM, 0));
+    auto socket_fd = TRY(Core::System::socket(AF_UNIX, SOCK_STREAM, 0));
 
     int option = 1;
     TRY(Core::System::ioctl(socket_fd, FIONBIO, &option));
+#        if !defined(AK_OS_WINDOWS)
     TRY(Core::System::fcntl(socket_fd, F_SETFD, FD_CLOEXEC));
+#        endif
 #    endif
 
 #    if !defined(AK_OS_BSD_GENERIC)
@@ -53,6 +55,12 @@ static ErrorOr<int> create_database_socket(DeprecatedString const& socket_path)
 
 static ErrorOr<void> launch_server(DeprecatedString const& socket_path, DeprecatedString const& pid_path, Vector<String> candidate_server_paths)
 {
+#    if defined(AK_OS_WINDOWS)
+    dbgln("SQLClient: Launching server not supported on Windows: {}, {}", socket_path, pid_path);
+    (void)candidate_server_paths;
+    (void)create_database_socket;
+    return {};
+#    else
     auto server_fd_or_error = create_database_socket(socket_path);
     if (server_fd_or_error.is_error()) {
         warnln("Failed to create a database socket at {}: {}", socket_path, server_fd_or_error.error());
@@ -108,6 +116,7 @@ static ErrorOr<void> launch_server(DeprecatedString const& socket_path, Deprecat
     if (wait_err.is_error())
         return wait_err.release_error();
     return {};
+#    endif
 }
 
 static ErrorOr<bool> should_launch_server(DeprecatedString const& pid_path)
@@ -137,11 +146,16 @@ static ErrorOr<bool> should_launch_server(DeprecatedString const& pid_path)
         TRY(Core::System::unlink(pid_path));
         return true;
     }
+#    if defined(AK_OS_WINDOWS)
+    dbgln("SQLClient: Checking if server is running not supported on Windows: {}", pid.value());
+    VERIFY_NOT_REACHED();
+#    else
     if (kill(*pid, 0) < 0) {
         warnln("SQLServer PID file '{}' exists with PID {}, but process cannot be found", pid_path, *pid);
         TRY(Core::System::unlink(pid_path));
         return true;
     }
+#    endif
 
     return false;
 }

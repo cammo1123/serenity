@@ -12,6 +12,12 @@
 #    include <LibSystem/syscall.h>
 #endif
 
+#ifdef AK_OS_WINDOWS
+typedef int pid_t;
+typedef int uid_t;
+typedef int gid_t;
+#endif
+
 namespace Core::SessionManagement {
 
 ErrorOr<pid_t> root_session_id([[maybe_unused]] Optional<pid_t> force_sid)
@@ -29,9 +35,14 @@ ErrorOr<pid_t> root_session_id([[maybe_unused]] Optional<pid_t> force_sid)
 
 ErrorOr<void> logout(Optional<pid_t> force_sid)
 {
+#if !defined(AK_OS_WINDOWS)
     pid_t sid = TRY(root_session_id(force_sid));
     TRY(System::kill(-sid, SIGTERM));
     return {};
+#else
+    VERIFY_NOT_REACHED();
+    (void)force_sid;
+#endif
 }
 
 ErrorOr<DeprecatedString> parse_path_with_sid(StringView general_path, Optional<pid_t> force_sid)
@@ -45,11 +56,18 @@ ErrorOr<DeprecatedString> parse_path_with_sid(StringView general_path, Optional<
 
 ErrorOr<void> create_session_temporary_directory_if_needed(uid_t uid, gid_t gid, Optional<pid_t> force_sid)
 {
+#if !defined(AK_OS_WINDOWS)
     pid_t sid = TRY(root_session_id(force_sid));
     auto const temporary_directory = DeprecatedString::formatted("/tmp/session/{}", sid);
     auto directory = TRY(Core::Directory::create(temporary_directory, Core::Directory::CreateDirectories::Yes));
     TRY(directory.chown(uid, gid));
     return {};
+#else
+    VERIFY_NOT_REACHED();
+    (void)uid;
+    (void)gid;
+    (void)force_sid;
+#endif
 }
 
 }

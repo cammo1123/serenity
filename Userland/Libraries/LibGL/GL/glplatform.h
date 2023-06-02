@@ -6,6 +6,10 @@
 
 #pragma once
 
+#ifdef APIENTRY
+#    undef APIENTRY
+#endif
+
 #ifndef GLAPI
 #    define GLAPI extern
 #endif

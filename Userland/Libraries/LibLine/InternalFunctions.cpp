@@ -12,8 +12,10 @@
 #include <LibCore/File.h>
 #include <LibLine/Editor.h>
 #include <stdio.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/wait.h>
+#    include <unistd.h>
+#endif
 
 namespace {
 constexpr u32 ctrl(char c) { return c & 0x3f; }
@@ -271,7 +273,11 @@ void Editor::enter_search()
 
         // Whenever the search editor gets a backspace, cycle back between history entries
         // unless we're at the zeroth entry, in which case, allow the deletion.
+#if !defined(AK_OS_WINDOWS)
         m_search_editor->register_key_input_callback(m_termios.c_cc[VERASE], [this](Editor& search_editor) {
+#else
+        m_search_editor->register_key_input_callback(VK_BACK, [this](Editor& search_editor) {
+#endif
             if (m_search_offset > 0) {
                 --m_search_offset;
                 search_editor.m_refresh_needed = true;
@@ -515,6 +521,7 @@ void Editor::uppercase_word()
 
 void Editor::edit_in_external_editor()
 {
+#if !defined(AK_OS_WINDOWS)
     auto const* editor_command = getenv("EDITOR");
     if (!editor_command)
         editor_command = m_configuration.m_default_text_editor.characters();
@@ -590,5 +597,9 @@ void Editor::edit_in_external_editor()
                 insert(ch);
         }
     }
+#else
+    dbgln("FIXME: Implement Editor::edit_in_external_editor() for Windows.");
+    VERIFY_NOT_REACHED();
+#endif
 }
 }

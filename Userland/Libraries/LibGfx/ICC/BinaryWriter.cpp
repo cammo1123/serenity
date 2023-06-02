@@ -10,6 +10,9 @@
 #include <LibGfx/ICC/Profile.h>
 #include <time.h>
 
+#if defined(AK_OS_WINDOWS)
+#    define gmtime_r(timep, result) gmtime_s(result, timep)
+#endif
 #pragma GCC diagnostic ignored "-Warray-bounds"
 
 namespace Gfx::ICC {

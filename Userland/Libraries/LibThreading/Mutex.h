@@ -10,7 +10,12 @@
 #include <AK/Assertions.h>
 #include <AK/Noncopyable.h>
 #include <AK/Types.h>
-#include <pthread.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <pthread.h>
+#else
+#    include <windows.h>
+#endif
 
 namespace Threading {
 
@@ -23,7 +28,10 @@ public:
     Mutex()
         : m_lock_count(0)
     {
-#ifndef AK_OS_SERENITY
+#if defined(AK_OS_WINDOWS)
+        InitializeCriticalSection(&m_critical_section);
+        m_mutex = CreateMutex(nullptr, FALSE, nullptr);
+#elif !defined(AK_OS_SERENITY)
         pthread_mutexattr_t attr;
         pthread_mutexattr_init(&attr);
         pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
@@ -33,7 +41,11 @@ public:
     ~Mutex()
     {
         VERIFY(m_lock_count == 0);
+#if defined(AK_OS_WINDOWS)
+        DeleteCriticalSection(&m_critical_section);
+#elif !defined(AK_OS_SERENITY)
         // FIXME: pthread_mutex_destroy() is not implemented.
+#endif
     }
 
     void lock();
@@ -42,6 +54,9 @@ public:
 private:
 #ifdef AK_OS_SERENITY
     pthread_mutex_t m_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+#elif defined(AK_OS_WINDOWS)
+    CRITICAL_SECTION m_critical_section;
+    HANDLE m_mutex;
 #else
     pthread_mutex_t m_mutex;
 #endif
@@ -71,7 +86,11 @@ private:
 
 ALWAYS_INLINE void Mutex::lock()
 {
+#if defined(AK_OS_WINDOWS)
+    EnterCriticalSection(&m_critical_section);
+#elif defined(AK_OS_UNIX)
     pthread_mutex_lock(&m_mutex);
+#endif
     m_lock_count++;
 }
 
@@ -82,7 +101,11 @@ ALWAYS_INLINE void Mutex::unlock()
     // This may be bad because we're not *technically* unlocked yet,
     // but we're not handling any errors from pthread_mutex_unlock anyways.
     m_lock_count--;
+#if defined(AK_OS_WINDOWS)
+    ReleaseMutex(m_mutex);
+#else
     pthread_mutex_unlock(&m_mutex);
+#endif
 }
 
 }

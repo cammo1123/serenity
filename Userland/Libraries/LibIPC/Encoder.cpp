@@ -126,8 +126,14 @@ ErrorOr<void> encode(Encoder& encoder, Core::AnonymousBuffer const& buffer)
     TRY(encoder.encode(buffer.is_valid()));
 
     if (buffer.is_valid()) {
+#if defined(AK_OS_WINDOWS)
+        dbgln("FIXME: Implement encoding of Core::AnonymousBuffer on Windows, {}", buffer.handle());
+        TRY(encoder.encode((uintptr_t) buffer.handle()));
+        TRY(encoder.encode(buffer.size()));
+#else
         TRY(encoder.encode_size(buffer.size()));
         TRY(encoder.encode(IPC::File { buffer.fd() }));
+#endif
     }
 
     return {};

@@ -13,12 +13,13 @@ namespace Browser {
 
 class Settings : public QObject {
 public:
-    Settings();
+    static Settings& the();
 
     QString new_tab_page();
     void set_new_tab_page(QString const& page);
 
 private:
+    Settings();
     QSettings* m_qsettings;
 };
 

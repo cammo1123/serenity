@@ -19,9 +19,6 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 namespace IPC {
 

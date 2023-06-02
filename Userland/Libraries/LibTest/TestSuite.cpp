@@ -12,7 +12,23 @@
 #include <LibTest/TestSuite.h>
 #include <math.h>
 #include <stdlib.h>
-#include <sys/time.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/time.h>
+#else
+#    include <winsock2.h>
+#    ifndef timersub
+#        define timersub(a, b, result)                           \
+            do {                                                 \
+                (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;    \
+                (result)->tv_usec = (a)->tv_usec - (b)->tv_usec; \
+                if ((result)->tv_usec < 0) {                     \
+                    --(result)->tv_sec;                          \
+                    (result)->tv_usec += 1000000;                \
+                }                                                \
+            } while (0)
+#    endif // timersub
+#endif     // AK_OS_WINDOWS
 
 namespace Test {
 
@@ -22,7 +38,11 @@ class TestElapsedTimer {
 public:
     TestElapsedTimer() { restart(); }
 
-    void restart() { gettimeofday(&m_started, nullptr); }
+#if !defined(AK_OS_WINDOWS)
+    void restart()
+    {
+        gettimeofday(&m_started, nullptr);
+    }
 
     u64 elapsed_milliseconds()
     {
@@ -37,6 +57,17 @@ public:
 
 private:
     struct timeval m_started = {};
+#else
+    void restart()
+    {
+        m_started = GetTickCount64();
+    }
+
+    u64 elapsed_milliseconds() { return GetTickCount64() - m_started; }
+
+private:
+    u64 m_started = 0;
+#endif
 };
 
 // Declared in Macros.h

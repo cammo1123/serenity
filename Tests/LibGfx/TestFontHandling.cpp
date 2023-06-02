@@ -11,7 +11,6 @@
 #include <LibTest/TestCase.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #ifdef AK_OS_SERENITY
 #    define TEST_INPUT(x) ("/usr/Tests/LibGfx/test-inputs/" x)

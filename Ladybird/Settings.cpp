@@ -8,8 +8,17 @@
 
 namespace Browser {
 
+static Settings* s_the;
+
+Settings& Settings::the() {
+    if (!s_the)
+        s_the = new Settings();
+    return *s_the;
+}
+
 Settings::Settings()
 {
+    s_the = this;
     m_qsettings = new QSettings("Serenity", "Ladybird", this);
 }
 

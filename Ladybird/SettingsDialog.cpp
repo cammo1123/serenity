@@ -5,11 +5,10 @@
  */
 
 #include "SettingsDialog.h"
+#include "Ladybird/Settings.h"
 #include "Settings.h"
 #include <QCloseEvent>
 #include <QLabel>
-
-extern Browser::Settings* s_settings;
 
 SettingsDialog::SettingsDialog(QMainWindow* window)
     : m_window(window)
@@ -42,5 +41,5 @@ void SettingsDialog::closeEvent(QCloseEvent* event)
 void SettingsDialog::save()
 {
     // FIXME: Validate data.
-    s_settings->set_new_tab_page(m_new_tab_page->text());
+    Browser::Settings::the().set_new_tab_page(m_new_tab_page->text());
 }

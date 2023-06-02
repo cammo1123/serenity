@@ -75,6 +75,12 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Svg)
 
+if (WIN32)
+    # FIXME: This is a hack to get the Qt6 target to link properly.
+    # NOTE: clang-cl isnt supported so we use the mingw version
+    SET(CMAKE_PREFIX_PATH "C:\\Qt\\6.5.0\\msvc2019_64")
+endif()
+
 set(BROWSER_SOURCE_DIR ${SERENITY_SOURCE_DIR}/Userland/Applications/Browser/)
 
 set(SOURCES
@@ -102,6 +108,14 @@ qt_add_executable(ladybird ${SOURCES}
 )
 target_link_libraries(ladybird PRIVATE Qt::Core Qt::Gui Qt::Network Qt::Widgets Qt::Svg LibCore LibFileSystem LibGfx LibGUI LibIPC LibJS LibMain LibWeb LibWebView LibSQL)
 
+if (WIN32)
+    # The clang-cl and MSVC versions are ABI compatible, however the default compile options are not. 
+    set_target_properties(Qt6::Platform PROPERTIES INTERFACE_COMPILE_OPTIONS "")
+    set_target_properties(Qt6::PlatformCommonInternal PROPERTIES INTERFACE_LINK_OPTIONS "")
+    target_link_libraries(ladybird PRIVATE ws2_32)
+endif()
+
+target_compile_definitions(ladybird PRIVATE Ladybird_EXPORTS)
 target_include_directories(ladybird PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Applications/)
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Services/)

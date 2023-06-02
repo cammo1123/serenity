@@ -150,7 +150,13 @@ ErrorOr<NonnullOwnPtr<File>> Directory::open(StringView filename, File::OpenMode
 
 ErrorOr<struct stat> Directory::stat(StringView filename, int flags) const
 {
-    return System::fstatat(m_directory_fd, filename, flags);
+ #if !defined(AK_OS_WINDOWS)
+    return System::fstatat(m_directory_fd);
+#else
+    (void ) flags;
+    dbgln("Directory::stat({}) not implemented on Windows", filename);
+    VERIFY_NOT_REACHED();
+#endif
 }
 
 ErrorOr<struct stat> Directory::stat() const

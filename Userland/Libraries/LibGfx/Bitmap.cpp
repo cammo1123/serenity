@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Format.h"
 #include <AK/Bitmap.h>
 #include <AK/Checked.h>
 #include <AK/DeprecatedString.h>
@@ -25,8 +26,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <sys/mman.h>
-
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/mman.h>
+#endif
 namespace Gfx {
 
 struct BackingStore {
@@ -146,6 +148,8 @@ ErrorOr<NonnullRefPtr<Bitmap>> Bitmap::load_from_file(NonnullOwnPtr<Core::File> 
 {
     auto mapped_file = TRY(Core::MappedFile::map_from_file(move(file), path));
     auto mime_type = Core::guess_mime_type_based_on_filename(path);
+
+    dbgln("Bitmap::load_from_file: Loading {} ({} bytes) with mime-type {}", path, mapped_file->size(), mime_type);
     if (auto decoder = ImageDecoder::try_create_for_raw_bytes(mapped_file->bytes(), mime_type)) {
         auto frame = TRY(decoder->frame(0));
         if (auto& bitmap = frame.image)
@@ -539,8 +543,12 @@ ErrorOr<NonnullRefPtr<Gfx::Bitmap>> Bitmap::inverted() const
 Bitmap::~Bitmap()
 {
     if (m_needs_munmap) {
+#if defined(AK_OS_WINDOWS)
+        UnmapViewOfFile(m_data);
+#else
         int rc = munmap(m_data, size_in_bytes());
         VERIFY(rc == 0);
+#endif
     }
     m_data = nullptr;
     delete[] m_palette;
@@ -615,16 +623,27 @@ ErrorOr<BackingStore> Bitmap::allocate_backing_store(BitmapFormat format, IntSiz
 
     auto const pitch = minimum_pitch(size.width() * scale_factor, format);
     auto const data_size_in_bytes = size_in_bytes(pitch, size.height() * scale_factor);
-
+#if defined(AK_OS_WINDOWS)
+    HANDLE file_mapping = CreateFileMapping(INVALID_HANDLE_VALUE, nullptr, PAGE_READWRITE, 0, data_size_in_bytes, nullptr);
+    if (!file_mapping)
+        return Error::from_windows_error(GetLastError());
+    void* data = MapViewOfFile(file_mapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+    if (!data) {
+        CloseHandle(file_mapping);
+        return Error::from_windows_error(GetLastError());
+    }
+    CloseHandle(file_mapping);
+#else
     int map_flags = MAP_ANONYMOUS | MAP_PRIVATE;
-#ifdef AK_OS_SERENITY
+#    ifdef AK_OS_SERENITY
     map_flags |= MAP_PURGEABLE;
     void* data = mmap_with_name(nullptr, data_size_in_bytes, PROT_READ | PROT_WRITE, map_flags, 0, 0, DeprecatedString::formatted("GraphicsBitmap [{}]", size).characters());
-#else
+#    else
     void* data = mmap(nullptr, data_size_in_bytes, PROT_READ | PROT_WRITE, map_flags, -1, 0);
-#endif
+#    endif
     if (data == MAP_FAILED)
         return Error::from_errno(errno);
+#endif
     return BackingStore { data, pitch, data_size_in_bytes };
 }
 

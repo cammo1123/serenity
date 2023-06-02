@@ -26,7 +26,6 @@
 #include <QTabBar>
 
 extern DeprecatedString s_serenity_resource_root;
-extern Browser::Settings* s_settings;
 
 static QIcon const& app_icon()
 {
@@ -343,7 +342,7 @@ BrowserWindow::BrowserWindow(Browser::CookieJar& cookie_jar, StringView webdrive
     });
 
     QObject::connect(new_tab_action, &QAction::triggered, this, [this] {
-        new_tab(s_settings->new_tab_page(), Web::HTML::ActivateTab::Yes);
+        new_tab(Browser::Settings::the().new_tab_page(), Web::HTML::ActivateTab::Yes);
     });
     QObject::connect(settings_action, &QAction::triggered, this, [this] {
         new SettingsDialog(this);
@@ -383,7 +382,7 @@ BrowserWindow::BrowserWindow(Browser::CookieJar& cookie_jar, StringView webdrive
     m_go_back_action->setEnabled(false);
     m_go_forward_action->setEnabled(false);
 
-    new_tab(s_settings->new_tab_page(), Web::HTML::ActivateTab::Yes);
+    new_tab(Browser::Settings::the().new_tab_page(), Web::HTML::ActivateTab::Yes);
 
     setCentralWidget(m_tabs_container);
     setContextMenuPolicy(Qt::PreventContextMenu);

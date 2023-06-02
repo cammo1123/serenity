@@ -17,7 +17,12 @@
 #include <LibWeb/WebDriver/Error.h>
 #include <LibWeb/WebDriver/Response.h>
 #include <WebDriver/WebContentConnection.h>
-#include <unistd.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <unistd.h>
+#else
+typedef int pid_t;
+#endif
 
 namespace WebDriver {
 

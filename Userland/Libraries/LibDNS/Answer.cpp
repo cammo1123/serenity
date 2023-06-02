@@ -88,7 +88,7 @@ ErrorOr<void> AK::Formatter<DNS::RecordType>::format(AK::FormatBuilder& builder,
 ErrorOr<void> AK::Formatter<DNS::RecordClass>::format(AK::FormatBuilder& builder, DNS::RecordClass value)
 {
     switch (value) {
-    case DNS::RecordClass::IN:
+    case DNS::RecordClass::_IN:
         return builder.put_string("IN"sv);
     }
 

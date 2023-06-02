@@ -12,8 +12,11 @@ function(lagom_tool tool)
 endfunction()
 
 add_subdirectory(CodeGenerators)
-add_subdirectory(ConfigureComponents)
 add_subdirectory(IPCMagicLinter)
+
+if (NOT WIN32)
+    add_subdirectory(ConfigureComponents)
+endif()
 
 if (ENABLE_JAKT)
     include(jakt)

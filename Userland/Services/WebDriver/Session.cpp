@@ -15,7 +15,7 @@
 #include <LibCore/LocalServer.h>
 #include <LibCore/StandardPaths.h>
 #include <LibCore/System.h>
-#include <unistd.h>
+#include <process.h>
 
 namespace WebDriver {
 
@@ -44,8 +44,13 @@ Session::~Session()
 
     // 3. Perform any implementation-specific cleanup steps.
     if (m_browser_pid.has_value()) {
+#if !defined(AK_OS_WINDOWS)
         MUST(Core::System::kill(*m_browser_pid, SIGTERM));
         m_browser_pid = {};
+#else
+        dbgln("TODO: Implement WebDriver::Session::~Session() for Windows");
+        VERIFY_NOT_REACHED();
+#endif
     }
     if (m_web_content_socket_path.has_value()) {
         MUST(Core::System::unlink(*m_web_content_socket_path));

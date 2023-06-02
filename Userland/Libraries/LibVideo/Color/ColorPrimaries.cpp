@@ -9,6 +9,12 @@
 
 #include "ColorPrimaries.h"
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(ILLUMINANT_D65)
+#        undef ILLUMINANT_D65
+#    endif
+#endif
+
 namespace Video {
 
 ALWAYS_INLINE constexpr FloatVector3 primaries_to_xyz(FloatVector2 primaries)

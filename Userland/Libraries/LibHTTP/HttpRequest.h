@@ -14,6 +14,12 @@
 #include <AK/Vector.h>
 #include <LibCore/Forward.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(DELETE)
+#        undef DELETE
+#    endif
+#endif
+
 namespace HTTP {
 
 class HttpRequest {

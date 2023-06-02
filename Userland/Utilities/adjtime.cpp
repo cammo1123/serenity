@@ -8,8 +8,11 @@
 #include <LibCore/ArgsParser.h>
 #include <LibCore/System.h>
 #include <math.h>
-#include <sys/time.h>
-#include <unistd.h>
+
+#if !defined(AK_OS_WINDOWS)
+#    include <sys/time.h>
+#    include <unistd.h>
+#endif
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
