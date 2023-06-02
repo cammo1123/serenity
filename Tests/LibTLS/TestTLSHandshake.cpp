@@ -47,6 +47,11 @@ ErrorOr<Vector<Certificate>> load_certificates()
 
 TEST_CASE(test_TLS_hello_handshake)
 {
+    WSAData wsa_data;
+    auto rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if (rc != 0)
+        FAIL("WSAStartup failed");
+        
     Core::EventLoop loop;
     TLS::Options options;
     options.set_root_certificates(TRY_OR_FAIL(load_certificates()));

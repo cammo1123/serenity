@@ -48,6 +48,7 @@ ErrorOr<void> generate_header_file(JsonArray& identifier_data, Core::File& file)
 
 #include <AK/StringView.h>
 #include <AK/Traits.h>
+#include <LibWeb/Forward.h>
 
 namespace Web::CSS {
 
@@ -67,8 +68,8 @@ enum class ValueID {
     generator.append(R"~~~(
 };
 
-Optional<ValueID> value_id_from_string(StringView);
-StringView string_from_value_id(ValueID);
+LibWeb_API Optional<ValueID> value_id_from_string(StringView);
+LibWeb_API StringView string_from_value_id(ValueID);
 
 }
 

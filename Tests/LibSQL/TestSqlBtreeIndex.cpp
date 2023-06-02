@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <unistd.h>
-
 #include <AK/ScopeGuard.h>
 #include <LibSQL/BTree.h>
 #include <LibSQL/Heap.h>

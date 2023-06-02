@@ -87,13 +87,38 @@ TEST_CASE(built_in_sRGB)
     u32 para[] = { 0x70617261, 0x00000000, 0x00030000, 0x00026666, 0x0000F2A7, 0x00000D59, 0x000013D0, 0x00000A5B };
     for (u32& i : para)
         i = AK::convert_between_host_and_big_endian(i);
+#if defined(AK_OS_WINDOWS)
+    // memmem() is not available on Windows.
+    bool found = false;
+    for (size_t i = 0; i < serialized_bytes.size() - sizeof(para); ++i) {
+        if (memcmp(serialized_bytes.data() + i, para, sizeof(para)) == 0) {
+            found = true;
+            break;
+        }
+    }
+    EXPECT(found);
+#else
     EXPECT(memmem(serialized_bytes.data(), serialized_bytes.size(), para, sizeof(para)) != nullptr);
+#endif
 
     // We currently exactly match the chromatic adaptation matrix in GIMP's (and other's) built-in sRGB profile.
     u32 sf32[] = { 0x73663332, 0x00000000, 0x00010C42, 0x000005DE, 0xFFFFF325, 0x00000793, 0x0000FD90, 0xFFFFFBA1, 0xFFFFFDA2, 0x000003DC, 0x0000C06E };
     for (u32& i : sf32)
         i = AK::convert_between_host_and_big_endian(i);
+
+#if defined(AK_OS_WINDOWS)
+    // memmem() is not available on Windows.
+    found = false;
+    for (size_t i = 0; i < serialized_bytes.size() - sizeof(sf32); ++i) {
+        if (memcmp(serialized_bytes.data() + i, sf32, sizeof(sf32)) == 0) {
+            found = true;
+            break;
+        }
+    }
+    EXPECT(found);
+#else
     EXPECT(memmem(serialized_bytes.data(), serialized_bytes.size(), sf32, sizeof(sf32)) != nullptr);
+#endif
 }
 
 TEST_CASE(to_pcs)

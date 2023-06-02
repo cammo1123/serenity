@@ -73,8 +73,21 @@ class Serenity:
                     if (len(self.args.args) > 0):
                         os.environ["SERENITY_KERNEL_CMDLINE"] = self.args.args[0]
                     self.build_target("run")
+            case "test":
+                self.build_target()
+                if self.target == "lagom":
+                    self.run_tests()
+
             case _:
                 self.build_target(self.command)
+
+    def run_tests(self):
+        env = os.environ.copy()
+        env["CTEST_OUTPUT_ON_FAILURE"] = "1"
+        if (len(self.args.args) > 0):
+            subprocess.run("ctest -R " + self.args.args[0], shell=True, cwd=self.BUILD_DIR, env=env)
+        else:
+            subprocess.run("ctest", shell=True, cwd=self.BUILD_DIR, env=env)
 
     def build_image(self):
         if self.SERENITY_RUN == "limine":

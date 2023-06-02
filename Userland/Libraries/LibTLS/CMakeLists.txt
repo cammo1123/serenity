@@ -15,3 +15,7 @@ serenity_lib(LibTLS tls)
 target_link_libraries(LibTLS PRIVATE LibCore LibCrypto LibFileSystem)
 
 include(ca_certificates_data)
+
+if (WIN32)
+    target_link_libraries(LibTLS PRIVATE wsock32 ws2_32)
+endif()

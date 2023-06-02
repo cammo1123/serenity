@@ -27,3 +27,7 @@ set(GENERATED_SOURCES
 
 serenity_bin(RequestServer)
 target_link_libraries(RequestServer PRIVATE LibCore LibCrypto LibIPC LibGemini LibHTTP LibMain LibTLS)
+
+if(WIN32)
+    target_link_libraries(RequestServer PRIVATE wsock32 ws2_32)
+endif()

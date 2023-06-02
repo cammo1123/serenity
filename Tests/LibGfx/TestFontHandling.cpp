@@ -18,6 +18,10 @@
 #    define TEST_INPUT(x) ("test-inputs/" x)
 #endif
 
+#if defined(AK_OS_WINDOWS)
+#    define mkstemp(x) _mktemp_s(x, 6)
+#endif
+
 TEST_CASE(test_fontdatabase_get_by_name)
 {
     Gfx::FontDatabase::set_default_fonts_lookup_path(TEST_INPUT(""));

@@ -10,7 +10,6 @@
 #include <LibSQL/Tuple.h>
 #include <LibSQL/Value.h>
 #include <LibTest/TestCase.h>
-#include <unistd.h>
 
 constexpr static int keys[] = {
     39,

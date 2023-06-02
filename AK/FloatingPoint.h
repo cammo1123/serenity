@@ -74,9 +74,9 @@ union FloatExtractor<f32> {
     static constexpr int exponent_bits = 8;
     static constexpr unsigned exponent_max = 255;
     struct {
-        unsigned long long mantissa : 23;
-        unsigned exponent : 8;
-        unsigned sign : 1;
+        u64 mantissa : 23;
+        u64 exponent : 8;
+        u64 sign : 1;
     };
     f32 d;
 };

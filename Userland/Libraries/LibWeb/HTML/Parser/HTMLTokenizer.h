@@ -100,7 +100,7 @@ namespace Web::HTML {
     __ENUMERATE_TOKENIZER_STATE(DecimalCharacterReference)                \
     __ENUMERATE_TOKENIZER_STATE(NumericCharacterReferenceEnd)
 
-class HTMLTokenizer {
+class LibWeb_API HTMLTokenizer {
 public:
     explicit HTMLTokenizer();
     explicit HTMLTokenizer(StringView input, DeprecatedString const& encoding);

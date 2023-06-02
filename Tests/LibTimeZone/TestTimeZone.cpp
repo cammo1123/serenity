@@ -10,6 +10,11 @@
 #include <AK/Time.h>
 #include <LibTimeZone/TimeZone.h>
 
+#if defined(AK_OS_WINDOWS)
+#    define setenv(name, value, overwrite) _putenv_s(name, value)
+#    define unsetenv(name) _putenv_s(name, "")
+#endif
+
 using enum TimeZone::InDST;
 
 static void test_offset(StringView time_zone, i64 time, i64 expected_offset, TimeZone::InDST expected_in_dst)

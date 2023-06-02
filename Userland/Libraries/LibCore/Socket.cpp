@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/Assertions.h"
 #include <LibCore/Socket.h>
 #include <LibCore/System.h>
 

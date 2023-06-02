@@ -72,6 +72,11 @@ ErrorOr<IPv4Address> Socket::resolve_host(DeprecatedString const& host, SocketTy
         VERIFY_NOT_REACHED();
     }
 
+    WSAData wsa_data;
+    auto rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+    if (rc != 0)
+        return Error::from_windows_error(GetLastError());
+
     struct addrinfo hints = {};
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = socket_type;

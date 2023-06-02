@@ -7,6 +7,7 @@
 #include <LibTest/TestCase.h>
 
 #include <AK/Time.h>
+#if !defined(AK_OS_WINDOWS)
 #include <sys/time.h>
 
 #define EXPECT_DURATION(t, s, ns)    \
@@ -621,3 +622,5 @@ TEST_CASE(from_unix_time_parts_overflow)
     EXPECT_DURATION(UnixDateTime::from_unix_time_parts(2'147'483'647, 12, 255, 255, 255, 255, 65535).offset_to_epoch(), 67767976253733620, 535'000'000);
     EXPECT_DURATION(UnixDateTime::from_unix_time_parts(2'147'483'647, 255, 255, 255, 255, 255, 65535).offset_to_epoch(), 67767976202930420, 535'000'000);
 }
+
+#endif
