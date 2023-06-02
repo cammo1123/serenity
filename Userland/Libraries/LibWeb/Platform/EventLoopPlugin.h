@@ -12,7 +12,7 @@
 
 namespace Web::Platform {
 
-class EventLoopPlugin {
+class LibWeb_API EventLoopPlugin {
 public:
     static EventLoopPlugin& the();
     static void install(EventLoopPlugin&);

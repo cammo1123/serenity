@@ -10,6 +10,16 @@
 #include <LibJS/Forward.h>
 #include <LibWeb/Bindings/Forward.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(LibWeb_EXPORTS)
+#        define LibWeb_API __declspec(dllexport)
+#    else
+#        define LibWeb_API __declspec(dllimport)
+#    endif
+#else
+#    define LibWeb_API __attribute__((visibility("default")))
+#endif
+
 namespace Web {
 class EditEventHandler;
 class EventHandler;

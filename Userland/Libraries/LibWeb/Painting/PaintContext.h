@@ -13,10 +13,11 @@
 #include <LibGfx/Rect.h>
 #include <LibWeb/PixelUnits.h>
 #include <LibWeb/SVG/SVGContext.h>
+#include <LibWeb/Forward.h>
 
 namespace Web {
 
-class PaintContext {
+class LibWeb_API PaintContext {
 public:
     PaintContext(Gfx::Painter& painter, Palette const& palette, double device_pixels_per_css_pixel);
 

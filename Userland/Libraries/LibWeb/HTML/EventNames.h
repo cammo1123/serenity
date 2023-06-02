@@ -9,6 +9,16 @@
 #include <AK/Error.h>
 #include <AK/FlyString.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(LibWeb_EXPORTS)
+#        define LIBWEB_API __declspec(dllexport)
+#    else
+#        define LIBWEB_API __declspec(dllimport)
+#    endif
+#else
+#    define LIBWEB_API [[gnu::visibility("default")]]
+#endif
+
 namespace Web::HTML::EventNames {
 
 // FIXME: Add app cache events https://html.spec.whatwg.org/multipage/offline.html#appcacheevents
@@ -100,7 +110,7 @@ namespace Web::HTML::EventNames {
     __ENUMERATE_HTML_EVENT(webkitAnimationStart)     \
     __ENUMERATE_HTML_EVENT(webkitTransitionEnd)
 
-#define __ENUMERATE_HTML_EVENT(name) extern FlyString name;
+#define __ENUMERATE_HTML_EVENT(name) LIBWEB_API extern FlyString name;
 ENUMERATE_HTML_EVENTS
 #undef __ENUMERATE_HTML_EVENT
 

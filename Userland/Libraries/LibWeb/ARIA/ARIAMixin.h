@@ -12,7 +12,7 @@
 
 namespace Web::ARIA {
 
-class ARIAMixin {
+class LibWeb_API  ARIAMixin {
 
 public:
     virtual ~ARIAMixin() = default;

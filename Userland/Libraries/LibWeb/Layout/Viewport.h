@@ -12,7 +12,7 @@
 
 namespace Web::Layout {
 
-class Viewport final : public BlockContainer {
+class LibWeb_API Viewport final : public BlockContainer {
     JS_CELL(Viewport, BlockContainer);
 
 public:

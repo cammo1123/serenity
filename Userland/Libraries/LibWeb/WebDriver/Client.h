@@ -24,7 +24,7 @@ namespace Web::WebDriver {
 
 using Parameters = Vector<String>;
 
-class Client : public Core::Object {
+class LibWeb_API Client : public Core::Object {
     C_OBJECT_ABSTRACT(Client);
 
 public:

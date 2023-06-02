@@ -40,7 +40,7 @@ private:                                                                    \
         form_associated_element_was_removed(node);                          \
     }
 
-class FormAssociatedElement {
+class LibWeb_API FormAssociatedElement {
 public:
     HTMLFormElement* form() { return m_form; }
     HTMLFormElement const* form() const { return m_form; }

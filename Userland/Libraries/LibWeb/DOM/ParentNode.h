@@ -10,7 +10,7 @@
 
 namespace Web::DOM {
 
-class ParentNode : public Node {
+class LibWeb_API ParentNode : public Node {
     WEB_PLATFORM_OBJECT(ParentNode, Node);
 
 public:

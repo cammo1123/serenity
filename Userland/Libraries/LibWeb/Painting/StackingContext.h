@@ -13,7 +13,7 @@
 
 namespace Web::Painting {
 
-class StackingContext {
+class LibWeb_API StackingContext {
 public:
     StackingContext(Layout::Box&, StackingContext* parent, size_t index_in_tree_order);
 

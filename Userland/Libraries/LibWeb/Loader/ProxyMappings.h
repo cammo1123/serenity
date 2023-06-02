@@ -10,10 +10,11 @@
 #include <AK/URL.h>
 #include <AK/Vector.h>
 #include <LibCore/Proxy.h>
+#include <LibWeb/Forward.h>
 
 namespace Web {
 
-class ProxyMappings {
+class LibWeb_API ProxyMappings {
 public:
     static ProxyMappings& the();
 

@@ -16,7 +16,7 @@
 
 namespace Web::CSS {
 
-class StyleProperties : public RefCounted<StyleProperties> {
+class LibWeb_API StyleProperties : public RefCounted<StyleProperties> {
 public:
     StyleProperties() = default;
 

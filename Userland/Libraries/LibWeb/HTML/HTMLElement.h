@@ -18,7 +18,7 @@ namespace Web::HTML {
     __ENUMERATE_HTML_ELEMENT_DIR_ATTRIBUTE(rtl) \
     __ENUMERATE_HTML_ELEMENT_DIR_ATTRIBUTE(auto)
 
-class HTMLElement
+class LibWeb_API HTMLElement
     : public DOM::Element
     , public HTML::GlobalEventHandlers {
     WEB_PLATFORM_OBJECT(HTMLElement, DOM::Element);

@@ -13,7 +13,7 @@
 
 namespace Web::Painting {
 
-class PaintableBox : public Paintable {
+class LibWeb_API PaintableBox : public Paintable {
     JS_CELL(PaintableBox, Paintable);
 
 public:

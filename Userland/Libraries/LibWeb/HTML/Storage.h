@@ -13,7 +13,7 @@
 
 namespace Web::HTML {
 
-class Storage : public Bindings::LegacyPlatformObject {
+class LibWeb_API Storage : public Bindings::LegacyPlatformObject {
     WEB_PLATFORM_OBJECT(Storage, Bindings::LegacyPlatformObject);
 
 public:

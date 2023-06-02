@@ -10,7 +10,7 @@
 
 namespace Web::Platform {
 
-class EventLoopPluginSerenity final : public Web::Platform::EventLoopPlugin {
+class LibWeb_API EventLoopPluginSerenity final : public Web::Platform::EventLoopPlugin {
 public:
     EventLoopPluginSerenity();
     virtual ~EventLoopPluginSerenity() override;

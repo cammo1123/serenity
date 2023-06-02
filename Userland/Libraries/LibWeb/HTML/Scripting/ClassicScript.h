@@ -13,7 +13,7 @@
 namespace Web::HTML {
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#classic-script
-class ClassicScript final : public Script {
+class LibWeb_API ClassicScript final : public Script {
     JS_CELL(ClassicScript, Script);
 
 public:

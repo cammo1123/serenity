@@ -54,7 +54,7 @@ enum class RunScriptDecision {
 };
 
 // https://html.spec.whatwg.org/multipage/webappapis.html#environment-settings-object
-struct EnvironmentSettingsObject
+struct LibWeb_API EnvironmentSettingsObject
     : public JS::Cell
     , public Environment {
     JS_CELL(EnvironmentSettingsObject, JS::Cell);
@@ -143,8 +143,8 @@ JS::Object& incumbent_global_object();
 EnvironmentSettingsObject& current_settings_object();
 JS::Object& current_global_object();
 JS::Realm& relevant_realm(JS::Object const&);
-EnvironmentSettingsObject& relevant_settings_object(JS::Object const&);
-EnvironmentSettingsObject& relevant_settings_object(DOM::Node const&);
+LibWeb_API EnvironmentSettingsObject& relevant_settings_object(JS::Object const&);
+LibWeb_API EnvironmentSettingsObject& relevant_settings_object(DOM::Node const&);
 JS::Object& relevant_global_object(JS::Object const&);
 JS::Realm& entry_realm();
 EnvironmentSettingsObject& entry_settings_object();

@@ -8,10 +8,11 @@
 
 #include <AK/RefCounted.h>
 #include <LibJS/SafeFunction.h>
+#include <LibWeb/Forward.h>
 
 namespace Web::Platform {
 
-class Timer : public RefCounted<Timer> {
+class LibWeb_API Timer : public RefCounted<Timer> {
 public:
     static NonnullRefPtr<Timer> create();
     static NonnullRefPtr<Timer> create_repeating(int interval_ms, JS::SafeFunction<void()>&& timeout_handler);

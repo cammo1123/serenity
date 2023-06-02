@@ -24,7 +24,8 @@
 
 namespace Web {
 
-static DeprecatedString s_default_favicon_path = "/res/icons/16x16/app-browser.png";
+// FIXME: s_serenity_resource_root
+static DeprecatedString s_default_favicon_path = "C:/Users/camer/src/serenity/Build/lagom/share/res/icons/16x16/app-browser.png";
 static RefPtr<Gfx::Bitmap> s_default_favicon_bitmap;
 
 void FrameLoader::set_default_favicon_path(DeprecatedString path)

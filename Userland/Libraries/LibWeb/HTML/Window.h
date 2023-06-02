@@ -37,7 +37,7 @@ struct ScrollToOptions : public ScrollOptions {
     Optional<double> top;
 };
 
-class Window final
+class LibWeb_API Window final
     : public DOM::EventTarget
     , public GlobalEventHandlers
     , public WindowEventHandlers

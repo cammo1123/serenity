@@ -33,9 +33,9 @@ Optional<ParsedCookie> parse_cookie(DeprecatedString const& cookie_string);
 namespace IPC {
 
 template<>
-ErrorOr<void> encode(Encoder&, Web::Cookie::ParsedCookie const&);
+LibWeb_API ErrorOr<void> encode(Encoder&, Web::Cookie::ParsedCookie const&);
 
 template<>
-ErrorOr<Web::Cookie::ParsedCookie> decode(Decoder&);
+LibWeb_API ErrorOr<Web::Cookie::ParsedCookie> decode(Decoder&);
 
 }

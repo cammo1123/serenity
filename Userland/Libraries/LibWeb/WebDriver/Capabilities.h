@@ -54,12 +54,12 @@ constexpr UnhandledPromptBehavior unhandled_prompt_behavior_from_string(StringVi
     VERIFY_NOT_REACHED();
 }
 
-struct LadybirdOptions {
+struct LibWeb_API LadybirdOptions {
     explicit LadybirdOptions(JsonObject const& capabilities);
 
     bool headless { false };
 };
 
-Response process_capabilities(JsonValue const& parameters);
+LibWeb_API Response process_capabilities(JsonValue const& parameters);
 
 }

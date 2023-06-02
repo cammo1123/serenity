@@ -10,6 +10,16 @@
 #include <AK/Error.h>
 #include <AK/FlyString.h>
 
+#if defined(AK_OS_WINDOWS)
+#    if defined(LibWeb_EXPORTS)
+#        define LIBWEB_API __declspec(dllexport)
+#    else
+#        define LIBWEB_API __declspec(dllimport)
+#    endif
+#else
+#    define LIBWEB_API [[gnu::visibility("default")]]
+#endif
+
 namespace Web::UIEvents::EventNames {
 
 // FIXME: This is not all of the events
@@ -32,7 +42,7 @@ namespace Web::UIEvents::EventNames {
     __ENUMERATE_UI_EVENT(resize)      \
     __ENUMERATE_UI_EVENT(wheel)
 
-#define __ENUMERATE_UI_EVENT(name) extern FlyString name;
+#define __ENUMERATE_UI_EVENT(name) LIBWEB_API extern FlyString name;
 ENUMERATE_UI_EVENTS
 #undef __ENUMERATE_UI_EVENT
 

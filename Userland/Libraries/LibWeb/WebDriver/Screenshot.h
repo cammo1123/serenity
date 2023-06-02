@@ -14,6 +14,6 @@
 namespace Web::WebDriver {
 
 using Painter = Function<void(Gfx::IntRect const&, Gfx::Bitmap&)>;
-Response capture_element_screenshot(Painter const& painter, Page& page, DOM::Element& element, Gfx::IntRect& rect);
+LibWeb_API Response capture_element_screenshot(Painter const& painter, Page& page, DOM::Element& element, Gfx::IntRect& rect);
 
 }

@@ -8,6 +8,7 @@
 
 #include <AK/DeprecatedFlyString.h>
 #include <AK/Error.h>
+#include <LibWeb/Forward.h>
 
 namespace Web {
 namespace HTML {
@@ -242,7 +243,7 @@ ErrorOr<void> initialize_strings();
 
 }
 
-bool is_boolean_attribute(DeprecatedFlyString const& attribute);
+LibWeb_API bool is_boolean_attribute(DeprecatedFlyString const& attribute);
 
 }
 }

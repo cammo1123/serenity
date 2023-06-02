@@ -9,6 +9,7 @@
 
 #include <AK/DeprecatedString.h>
 #include <AK/JsonValue.h>
+#include <LibWeb/Forward.h>
 
 namespace Web::WebDriver {
 
@@ -48,7 +49,7 @@ enum class ErrorCode {
 };
 
 // https://w3c.github.io/webdriver/#errors
-struct Error {
+struct LibWeb_API Error {
     unsigned http_status;
     DeprecatedString error;
     DeprecatedString message;

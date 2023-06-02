@@ -14,7 +14,7 @@ namespace Web {
 
 constexpr size_t maximum_redirects_allowed = 20;
 
-class FrameLoader final
+class LibWeb_API FrameLoader final
     : public ResourceClient {
 public:
     enum class Type {

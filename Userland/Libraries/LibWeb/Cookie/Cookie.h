@@ -8,6 +8,7 @@
 
 #include <AK/DeprecatedString.h>
 #include <AK/Time.h>
+#include <LibWeb/Forward.h>
 #include <LibIPC/Forward.h>
 
 namespace Web::Cookie {
@@ -24,7 +25,7 @@ enum class Source {
     Http,
 };
 
-struct Cookie {
+struct LibWeb_API Cookie {
     DeprecatedString creation_time_to_string() const;
     DeprecatedString last_access_time_to_string() const;
     DeprecatedString expiry_time_to_string() const;
@@ -43,17 +44,17 @@ struct Cookie {
     bool persistent { false };
 };
 
-StringView same_site_to_string(SameSite same_site_mode);
-SameSite same_site_from_string(StringView same_site_mode);
+LibWeb_API StringView same_site_to_string(SameSite same_site_mode);
+LibWeb_API SameSite same_site_from_string(StringView same_site_mode);
 
 }
 
 namespace IPC {
 
 template<>
-ErrorOr<void> encode(Encoder&, Web::Cookie::Cookie const&);
+LibWeb_API ErrorOr<void> encode(Encoder&, Web::Cookie::Cookie const&);
 
 template<>
-ErrorOr<Web::Cookie::Cookie> decode(Decoder&);
+LibWeb_API ErrorOr<Web::Cookie::Cookie> decode(Decoder&);
 
 }

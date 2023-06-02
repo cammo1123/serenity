@@ -9,10 +9,11 @@
 #include <AK/DeprecatedString.h>
 #include <AK/Error.h>
 #include <AK/Function.h>
+#include <LibWeb/Forward.h>
 
 namespace Web {
 
-class FileRequest {
+class LibWeb_API FileRequest {
 public:
     FileRequest(DeprecatedString path, Function<void(ErrorOr<i32>)> on_file_request_finish);
 

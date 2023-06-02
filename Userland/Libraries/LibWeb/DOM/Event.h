@@ -18,7 +18,7 @@ struct EventInit {
     bool composed { false };
 };
 
-class Event : public Bindings::PlatformObject {
+class LibWeb_API Event : public Bindings::PlatformObject {
     WEB_PLATFORM_OBJECT(Event, Bindings::PlatformObject);
 
 public:

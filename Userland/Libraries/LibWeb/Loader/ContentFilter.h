@@ -9,10 +9,11 @@
 #include <AK/String.h>
 #include <AK/URL.h>
 #include <AK/Vector.h>
+#include <LibWeb/Forward.h>
 
 namespace Web {
 
-class ContentFilter {
+class LibWeb_API ContentFilter {
 public:
     static ContentFilter& the();
 

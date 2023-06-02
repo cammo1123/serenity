@@ -9,6 +9,7 @@
 #include <AK/Forward.h>
 #include <AK/Optional.h>
 #include <LibWeb/WebDriver/Error.h>
+#include <LibWeb/Forward.h>
 
 namespace Web::WebDriver {
 
@@ -19,7 +20,7 @@ struct TimeoutsConfiguration {
     u64 implicit_wait_timeout { 0 };
 };
 
-JsonObject timeouts_object(TimeoutsConfiguration const&);
-ErrorOr<TimeoutsConfiguration, Error> json_deserialize_as_a_timeouts_configuration(JsonValue const&);
+LibWeb_API JsonObject timeouts_object(TimeoutsConfiguration const&);
+LibWeb_API ErrorOr<TimeoutsConfiguration, Error> json_deserialize_as_a_timeouts_configuration(JsonValue const&);
 
 }

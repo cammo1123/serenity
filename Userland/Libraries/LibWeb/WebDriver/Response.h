@@ -9,13 +9,14 @@
 #include <AK/JsonValue.h>
 #include <AK/Variant.h>
 #include <LibIPC/Forward.h>
+#include <LibWeb/Forward.h>
 #include <LibWeb/WebDriver/Error.h>
 
 namespace Web::WebDriver {
 
 // FIXME: Ideally, this could be `using Response = ErrorOr<JsonValue, Error>`, but that won't be
 //        default-constructible, which is a requirement for the generated IPC.
-struct [[nodiscard]] Response {
+struct LibWeb_API [[nodiscard]] Response {
     Response() = default;
     Response(JsonValue&&);
     Response(Error&&);
@@ -47,9 +48,9 @@ private:
 namespace IPC {
 
 template<>
-ErrorOr<void> encode(Encoder&, Web::WebDriver::Response const&);
+LibWeb_API ErrorOr<void> encode(Encoder&, Web::WebDriver::Response const&);
 
 template<>
-ErrorOr<Web::WebDriver::Response> decode(Decoder&);
+LibWeb_API ErrorOr<Web::WebDriver::Response> decode(Decoder&);
 
 }

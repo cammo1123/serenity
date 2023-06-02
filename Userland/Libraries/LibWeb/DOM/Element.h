@@ -59,7 +59,7 @@ enum class CustomElementState {
     Custom,
 };
 
-class Element
+class LibWeb_API Element
     : public ParentNode
     , public ChildNode<Element>
     , public NonDocumentTypeChildNode<Element>

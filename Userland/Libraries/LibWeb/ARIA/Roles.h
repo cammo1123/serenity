@@ -8,6 +8,7 @@
 
 #include <AK/Forward.h>
 #include <AK/StringView.h>
+#include <LibWeb/Forward.h>
 
 namespace Web::ARIA {
 
@@ -113,8 +114,8 @@ enum class Role {
 #undef __ENUMERATE_ARIA_ROLE
 };
 
-StringView role_name(Role);
-Optional<Role> role_from_string(StringView role_name);
+LibWeb_API StringView role_name(Role);
+LibWeb_API Optional<Role> role_from_string(StringView role_name);
 
 bool is_abstract_role(Role);
 bool is_widget_role(Role);

@@ -10,6 +10,7 @@
 #include <AK/RefPtr.h>
 #include <AK/Vector.h>
 #include <LibGfx/Forward.h>
+#include <LibWeb/Forward.h>
 
 namespace Web::Platform {
 
@@ -24,7 +25,7 @@ struct DecodedImage {
     Vector<Frame> frames;
 };
 
-class ImageCodecPlugin {
+class LibWeb_API ImageCodecPlugin {
 public:
     static ImageCodecPlugin& the();
     static void install(ImageCodecPlugin&);

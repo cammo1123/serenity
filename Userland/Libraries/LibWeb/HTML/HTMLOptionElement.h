@@ -11,7 +11,7 @@
 
 namespace Web::HTML {
 
-class HTMLOptionElement final : public HTMLElement {
+class LibWeb_API HTMLOptionElement final : public HTMLElement {
     WEB_PLATFORM_OBJECT(HTMLOptionElement, HTMLElement);
 
 public:

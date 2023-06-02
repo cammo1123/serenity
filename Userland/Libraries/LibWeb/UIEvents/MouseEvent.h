@@ -25,7 +25,7 @@ struct MouseEventInit : public EventModifierInit {
     u16 buttons = 0;
 };
 
-class MouseEvent : public UIEvent {
+class LibWeb_API MouseEvent : public UIEvent {
     WEB_PLATFORM_OBJECT(MouseEvent, UIEvent);
 
 public:

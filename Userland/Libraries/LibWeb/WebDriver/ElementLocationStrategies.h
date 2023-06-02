@@ -23,7 +23,7 @@ enum class LocationStrategy {
     XPath,
 };
 
-Optional<LocationStrategy> location_strategy_from_string(StringView type);
-ErrorOr<JS::NonnullGCPtr<DOM::NodeList>, Error> invoke_location_strategy(LocationStrategy type, DOM::ParentNode& start_node, StringView selector);
+LibWeb_API Optional<LocationStrategy> location_strategy_from_string(StringView type);
+LibWeb_API ErrorOr<JS::NonnullGCPtr<DOM::NodeList>, Error> invoke_location_strategy(LocationStrategy type, DOM::ParentNode& start_node, StringView selector);
 
 }

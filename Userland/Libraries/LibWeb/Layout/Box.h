@@ -18,7 +18,7 @@ struct LineBoxFragmentCoordinate {
     size_t fragment_index { 0 };
 };
 
-class Box : public NodeWithStyleAndBoxModelMetrics {
+class LibWeb_API Box : public NodeWithStyleAndBoxModelMetrics {
     JS_CELL(Box, NodeWithStyleAndBoxModelMetrics);
 
 public:

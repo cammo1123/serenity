@@ -78,7 +78,7 @@ private:
     RefPtr<WebSocketClientSocket> m_websocket;
 };
 
-class WebSocketClientSocket : public RefCounted<WebSocketClientSocket> {
+class LibWeb_API WebSocketClientSocket : public RefCounted<WebSocketClientSocket> {
 public:
     virtual ~WebSocketClientSocket();
 
@@ -115,7 +115,7 @@ protected:
     explicit WebSocketClientSocket();
 };
 
-class WebSocketClientManager : public Core::Object {
+class LibWeb_API WebSocketClientManager : public Core::Object {
     C_OBJECT_ABSTRACT(WebSocketClientManager)
 public:
     static void initialize(RefPtr<WebSocketClientManager>);

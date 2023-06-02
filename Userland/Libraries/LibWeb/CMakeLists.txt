@@ -588,6 +588,8 @@ set(GENERATED_SOURCES
     CSS/ValueID.cpp
 )
 
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
+
 serenity_lib(LibWeb web)
 
 # NOTE: We link with LibSoftGPU here instead of lazy loading it via dlopen() so that we do not have to unveil the library and pledge prot_exec.

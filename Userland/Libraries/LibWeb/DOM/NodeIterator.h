@@ -12,7 +12,7 @@
 namespace Web::DOM {
 
 // https://dom.spec.whatwg.org/#nodeiterator
-class NodeIterator final : public Bindings::PlatformObject {
+class LibWeb_API NodeIterator final : public Bindings::PlatformObject {
     WEB_PLATFORM_OBJECT(NodeIterator, Bindings::PlatformObject);
 
 public:

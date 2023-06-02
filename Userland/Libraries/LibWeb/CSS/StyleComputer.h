@@ -58,7 +58,7 @@ struct FontFaceKey {
     [[nodiscard]] bool operator==(FontFaceKey const&) const = default;
 };
 
-class StyleComputer {
+class LibWeb_API StyleComputer {
 public:
     explicit StyleComputer(DOM::Document&);
     ~StyleComputer();

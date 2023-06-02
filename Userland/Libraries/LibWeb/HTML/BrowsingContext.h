@@ -31,7 +31,7 @@
 
 namespace Web::HTML {
 
-class BrowsingContext final
+class LibWeb_API BrowsingContext final
     : public AbstractBrowsingContext
     , public Weakable<BrowsingContext> {
     JS_CELL(BrowsingContext, AbstractBrowsingContext);

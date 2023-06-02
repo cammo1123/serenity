@@ -51,7 +51,7 @@ namespace Web {
 
 constexpr auto default_user_agent = "Mozilla/5.0 (" OS_STRING "; " CPU_STRING ") LibWeb+LibJS/1.0 " BROWSER_NAME "/" BROWSER_VERSION ""sv;
 
-class ResourceLoaderConnectorRequest : public RefCounted<ResourceLoaderConnectorRequest> {
+class LibWeb_API ResourceLoaderConnectorRequest : public RefCounted<ResourceLoaderConnectorRequest> {
 public:
     virtual ~ResourceLoaderConnectorRequest();
 
@@ -74,7 +74,7 @@ protected:
     explicit ResourceLoaderConnectorRequest();
 };
 
-class ResourceLoaderConnector : public RefCounted<ResourceLoaderConnector> {
+class LibWeb_API ResourceLoaderConnector : public RefCounted<ResourceLoaderConnector> {
 public:
     virtual ~ResourceLoaderConnector();
 
@@ -87,7 +87,7 @@ protected:
     explicit ResourceLoaderConnector();
 };
 
-class ResourceLoader : public Core::Object {
+class LibWeb_API ResourceLoader : public Core::Object {
     C_OBJECT_ABSTRACT(ResourceLoader)
 public:
     static void initialize(RefPtr<ResourceLoaderConnector>);

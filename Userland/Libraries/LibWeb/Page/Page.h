@@ -33,7 +33,7 @@ namespace Web {
 
 class PageClient;
 
-class Page : public Weakable<Page> {
+class LibWeb_API Page : public Weakable<Page> {
     AK_MAKE_NONCOPYABLE(Page);
     AK_MAKE_NONMOVABLE(Page);
 

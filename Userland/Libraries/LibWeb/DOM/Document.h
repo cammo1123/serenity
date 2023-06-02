@@ -77,7 +77,7 @@ enum class PolicyControlledFeature {
     Autoplay,
 };
 
-class Document
+class LibWeb_API Document
     : public ParentNode
     , public NonElementParentNode<Document>
     , public HTML::GlobalEventHandlers {

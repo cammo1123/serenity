@@ -17,6 +17,7 @@
 #include <LibWeb/DOM/EventTarget.h>
 #include <LibWeb/DOMParsing/XMLSerializer.h>
 #include <LibWeb/WebIDL/ExceptionOr.h>
+#include <LibWeb/Forward.h>
 
 namespace Web::DOM {
 
@@ -45,7 +46,7 @@ struct GetRootNodeOptions {
     bool composed { false };
 };
 
-class Node : public EventTarget {
+class LibWeb_API Node : public EventTarget {
     WEB_PLATFORM_OBJECT(Node, EventTarget);
 
 public:
