@@ -121,8 +121,8 @@ ErrorOr<Bytes> PosixSocketHelper::read(Bytes buffer, int flags)
         return Error::from_errno(ENOTCONN);
     }
 
-    dbgln("Core::PosixSocketHelper::read: fd={}, buffer={}, flags={}", m_fd, buffer.size(), flags);
     ssize_t nread = TRY(System::recv(m_fd, buffer.data(), buffer.size(), flags));
+    dbgln("Core::PosixSocketHelper::read: fd={}, buffer={}, flags={}, nread={}", m_fd, buffer.size(), flags, nread);
     m_last_read_was_eof = nread == 0;
 
     // If a socket read is EOF, then no more data can be read from it because
