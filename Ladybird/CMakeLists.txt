@@ -69,6 +69,9 @@ endif()
 add_compile_options(-DAK_DONT_REPLACE_STD)
 add_compile_options(-Wno-expansion-to-defined)
 add_compile_options(-Wno-user-defined-literals)
+if (WIN32)
+    add_compile_definitions(WEB_CONTENT_THREADED)
+endif()
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -154,12 +157,15 @@ add_custom_target(debug${LADYBIRD_CUSTOM_TARGET_SUFFIX}
     USES_TERMINAL
 )
 
-qt_finalize_executable(ladybird)
-
 add_subdirectory(SQLServer)
 add_subdirectory(WebContent)
 add_subdirectory(WebDriver)
 add_dependencies(ladybird SQLServer WebContent WebDriver headless-browser)
+
+if (WIN32)
+    target_link_libraries(ladybird PRIVATE WebContent)
+endif()
+qt_finalize_executable(ladybird)
 
 if (APPLE)
     # FIXME: Create a proper app bundle for each helper process

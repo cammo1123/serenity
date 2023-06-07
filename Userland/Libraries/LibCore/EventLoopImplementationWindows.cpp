@@ -117,23 +117,27 @@ size_t EventLoopImplementationWindows::pump(PumpMode mode)
 
 void EventLoopImplementationWindows::quit(int code)
 {
+    dbgln("EventLoop: Quitting with code {}", code);
     m_exit_requested = true;
     m_exit_code = code;
 }
 
 void EventLoopImplementationWindows::unquit()
 {
+    dbgln("EventLoop: Unquitting");
     m_exit_requested = false;
     m_exit_code = 0;
 }
 
 bool EventLoopImplementationWindows::was_exit_requested() const
 {
+    dbgln("EventLoop: was_exit_requested");
     return m_exit_requested;
 }
 
 void EventLoopImplementationWindows::post_event(Object& receiver, NonnullOwnPtr<Event>&& event)
 {
+    dbgln("EventLoop: Post event of");
     m_thread_event_queue.post_event(receiver, move(event));
     if (&m_thread_event_queue != &ThreadEventQueue::current())
         wake();
@@ -141,6 +145,7 @@ void EventLoopImplementationWindows::post_event(Object& receiver, NonnullOwnPtr<
 
 void EventLoopImplementationWindows::wake()
 {
+    dbgln("EventLoop: wake");
     int wake_event = 0;
     if (!WriteFile(m_wake_pipe_write_handle, &wake_event, sizeof(wake_event), nullptr, nullptr))
         VERIFY_NOT_REACHED();
@@ -148,6 +153,7 @@ void EventLoopImplementationWindows::wake()
 
 void EventLoopManagerWindows::wait_for_events(EventLoopImplementation::PumpMode mode)
 {
+    dbgln("EventLoop: wait_for_events");
     auto& thread_data = ThreadData::the();
 
     WSAEVENT events[thread_data.notifiers.size()];

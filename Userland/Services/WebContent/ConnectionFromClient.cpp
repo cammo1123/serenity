@@ -103,7 +103,7 @@ void ConnectionFromClient::update_screen_rects(Vector<Gfx::IntRect> const& rects
 
 void ConnectionFromClient::load_url(const URL& url)
 {
-    dbgln_if(SPAM_DEBUG, "handle: WebContentServer::LoadURL: url={}", url);
+    dbgln("handle: WebContentServer::LoadURL: url={}", url);
 
 #if defined(AK_OS_SERENITY)
     DeprecatedString process_name;

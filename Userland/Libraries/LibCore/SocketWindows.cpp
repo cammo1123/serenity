@@ -122,7 +122,6 @@ ErrorOr<Bytes> PosixSocketHelper::read(Bytes buffer, int flags)
     }
 
     ssize_t nread = TRY(System::recv(m_fd, buffer.data(), buffer.size(), flags));
-    dbgln("Core::PosixSocketHelper::read: fd={}, buffer={}, flags={}, nread={}", m_fd, buffer.size(), flags, nread);
     m_last_read_was_eof = nread == 0;
 
     // If a socket read is EOF, then no more data can be read from it because
@@ -140,7 +139,6 @@ ErrorOr<size_t> PosixSocketHelper::write(ReadonlyBytes buffer, int flags)
         return Error::from_errno(ENOTCONN);
     }
 
-    dbgln("Core::PosixSocketHelper::write: fd={}, buffer={}, flags={}", m_fd, buffer.size(), flags);
     return TRY(System::send(m_fd, buffer.data(), buffer.size(), flags));
 }
 
@@ -168,21 +166,26 @@ void PosixSocketHelper::close()
 
 ErrorOr<bool> PosixSocketHelper::can_read_without_blocking(int timeout) const
 {
-#if defined(AK_OS_WINDOWS)
-    struct pollfd the_fd = { .fd = static_cast<SOCKET>(m_fd), .events = POLLIN, .revents = 0 };
-#else
-    struct pollfd the_fd = { .fd = m_fd, .events = POLLIN, .revents = 0 };
-#endif
+    // Use select() to check if the handle is ready to read.
+    // We don't use poll() here because it's not available on Windows.
 
-    ErrorOr<int> result { 0 };
-    do {
-        result = Core::System::poll({ &the_fd, 1 }, timeout);
-    } while (result.is_error() && result.error().code() == EINTR);
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET((SOCKET) m_fd, &fds);
 
-    if (result.is_error())
-        return result.release_error();
+    struct timeval tv;
+    struct timeval* tvp = nullptr;
+    if (timeout >= 0) {
+        tv.tv_sec = timeout / 1000;
+        tv.tv_usec = (timeout % 1000) * 1000;
+        tvp = &tv;
+    }
 
-    return (the_fd.revents & POLLIN) > 0;
+    auto rc = select(m_fd + 1, &fds, nullptr, nullptr, tvp);
+    if (rc < 0)
+        return Error::from_errno(-errno);
+
+    return rc > 0;
 }
 
 ErrorOr<void> PosixSocketHelper::set_blocking(bool enabled)
@@ -502,8 +505,16 @@ ErrorOr<Bytes> LocalSocket::read_without_waiting(Bytes buffer)
         return Error::from_errno(EBADF);
 
     PeekNamedPipe(handle, nullptr, 0, nullptr, &nread, nullptr);
+    dbgln("LocalSocket::read_without_waiting: Peeked {} bytes", nread);
+
     if (nread > 0) {
-        ReadFile(handle, buffer.data(), buffer.size(), &nread, nullptr);
+        dbgln("LocalSocket::read_without_waiting: Reading {} bytes", nread);
+
+        // Read the data without getting stuck in a blocking read.
+        if (!ReadFile(handle, buffer.data(), nread, &nread, nullptr))
+            return Error::from_windows_error(GetLastError());
+
+        dbgln("LocalSocket::read_without_waiting: Read {} bytes", nread);
     }
     return buffer.trim(nread);
 #endif

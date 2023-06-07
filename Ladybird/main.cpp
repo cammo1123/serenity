@@ -103,7 +103,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {
         window.view().load(url);
     } else {
-        window.view().load("about:blank"sv);
+        window.view().load("www.google.com"sv);
     }
 
     return event_loop.exec();

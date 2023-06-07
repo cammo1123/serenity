@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include "AK/DeprecatedString.h"
+#include <AK/StringUtils.h>
+#include <AK/StringView.h>
 #include <AK/Utf8View.h>
 #include <LibWeb/DOM/Range.h>
 #include <LibWeb/Layout/LayoutState.h>
@@ -19,7 +22,7 @@ bool LineBoxFragment::ends_in_whitespace() const
     auto text = this->text();
     if (text.is_empty())
         return false;
-    return isspace(text[text.length() - 1]);
+    return AK::StringUtils::is_whitespace(text.substring_view(text.length() - 1, 1));
 }
 
 bool LineBoxFragment::is_justifiable_whitespace() const

@@ -47,6 +47,7 @@ public:
 
     Core::LocalSocket& socket() { return *m_socket; }
     Core::LocalSocket& fd_passing_socket();
+    ErrorOr<void> drain_messages_from_peer();
 
 protected:
     explicit ConnectionBase(IPC::Stub&, NonnullOwnPtr<Core::LocalSocket>, u32 local_endpoint_magic);
@@ -59,7 +60,6 @@ protected:
     OwnPtr<IPC::Message> wait_for_specific_endpoint_message_impl(u32 endpoint_magic, int message_id);
     void wait_for_socket_to_become_readable();
     ErrorOr<Vector<u8>> read_as_much_as_possible_from_socket_without_blocking();
-    ErrorOr<void> drain_messages_from_peer();
 
     ErrorOr<void> post_message(MessageBuffer);
     void handle_messages();

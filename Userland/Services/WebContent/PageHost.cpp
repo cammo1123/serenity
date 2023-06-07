@@ -390,7 +390,7 @@ DeprecatedString PageHost::page_did_request_cookie(const URL& url, Web::Cookie::
     auto response = m_client.send_sync_but_allow_failure<Messages::WebContentClient::DidRequestCookie>(move(url), static_cast<u8>(source));
     if (!response) {
         dbgln("WebContent client disconnected during DidRequestCookie. Exiting peacefully.");
-        exit(0);
+        return {};
     }
     return response->take_cookie();
 }

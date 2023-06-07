@@ -10,6 +10,7 @@
 #include "../RequestManagerQt.h"
 #include "../Utilities.h"
 #include "../WebSocketClientManagerLadybird.h"
+#include "WebContentThread.h"
 #include <AK/LexicalPath.h>
 #include <AK/Platform.h>
 #include <LibCore/ArgsParser.h>
@@ -27,6 +28,7 @@
 #include <LibWeb/Platform/EventLoopPluginSerenity.h>
 #include <LibWeb/WebSockets/WebSocket.h>
 #include <QGuiApplication>
+#include <QThread>
 #include <QTimer>
 #include <WebContent/ConnectionFromClient.h>
 #include <WebContent/PageHost.h>
@@ -41,10 +43,8 @@ static ErrorOr<void> load_autoplay_allowlist();
 
 extern DeprecatedString s_serenity_resource_root;
 
-ErrorOr<int> serenity_main(Main::Arguments arguments)
+static ErrorOr<void> web_platform_init(bool is_layout_test_mode)
 {
-    QGuiApplication app(arguments.argc, arguments.argv);
-
 #if defined(AK_OS_MACOS)
     prohibit_interaction();
 #endif
@@ -62,16 +62,6 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     Web::FrameLoader::set_default_favicon_path(DeprecatedString::formatted("{}/res/icons/16x16/app-browser.png", s_serenity_resource_root));
 
-    int webcontent_fd_passing_socket { -1 };
-    bool is_layout_test_mode = false;
-
-    Core::ArgsParser args_parser;
-    args_parser.add_option(webcontent_fd_passing_socket, "File descriptor of the passing socket for the WebContent connection", "webcontent-fd-passing-socket", 'c', "webcontent_fd_passing_socket");
-    args_parser.add_option(is_layout_test_mode, "Is layout test mode", "layout-test-mode", 0);
-    args_parser.parse(arguments);
-
-    VERIFY(webcontent_fd_passing_socket >= 0);
-
     Web::Platform::FontPlugin::install(*new Ladybird::FontPluginQt(is_layout_test_mode));
 
     Web::FrameLoader::set_error_page_url(DeprecatedString::formatted("file://{}/res/html/error.html", s_serenity_resource_root));
@@ -86,11 +76,23 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     if (maybe_autoplay_allowlist_error.is_error())
         dbgln("Failed to load autoplay allowlist: {}", maybe_autoplay_allowlist_error.error());
 
-    auto webcontent_socket = TRY(Core::take_over_socket_from_system_server("WebContent"sv));
-    auto webcontent_client = TRY(WebContent::ConnectionFromClient::try_create(move(webcontent_socket)));
-    webcontent_client->set_fd_passing_socket(TRY(Core::LocalSocket::adopt_fd(webcontent_fd_passing_socket)));
+    return {};
+}
 
-    return event_loop.exec();
+ErrorOr<int> web_content_main(WebContentThread* context, HANDLE read_pipe, HANDLE, HANDLE read_passing_pipe, HANDLE)
+{
+    Core::EventLoop event_loop;
+
+    platform_init();
+    TRY(web_platform_init(false));
+
+    auto webcontent_socket = TRY(Core::LocalSocket::adopt_fd(_open_osfhandle((intptr_t)read_pipe, 0)));
+    auto webcontent_client = TRY(WebContent::ConnectionFromClient::try_create(move(webcontent_socket)));
+    webcontent_client->set_fd_passing_socket(TRY(Core::LocalSocket::adopt_fd(_open_osfhandle((intptr_t)read_passing_pipe, 0))));
+
+    // webcontent_client->load_url(AK::URL("https://www.github.com"));
+
+    return context->exec_event_loop();
 }
 
 static ErrorOr<void> load_content_filters()

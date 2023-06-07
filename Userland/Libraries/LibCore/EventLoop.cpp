@@ -75,7 +75,9 @@ public:
 
 int EventLoop::exec()
 {
+    dbgln("Entering core event loop");
     EventLoopPusher pusher(*this);
+    dbgln("Entering main event loop");
     return m_impl->exec();
 }
 

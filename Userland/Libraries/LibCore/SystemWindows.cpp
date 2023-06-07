@@ -455,10 +455,13 @@ ErrorOr<int> mkstemp(Span<char>)
     VERIFY_NOT_REACHED();
 }
 
-ErrorOr<int> poll(Span<struct pollfd>, int)
+ErrorOr<int> poll(Span<struct pollfd> poll_fds, int timeout)
 {
-    dbgln("Core::System::poll() is not implemented");
-    VERIFY_NOT_REACHED();
+    dbgln("Using WSAPoll() instead of poll()");
+    auto const rc = ::WSAPoll(poll_fds.data(), poll_fds.size(), timeout);
+    if (rc < 0)
+        return Error::from_syscall("WSAPoll"sv, -WSAGetLastError());
+    return { rc };
 }
 
 ErrorOr<void> ioctl(int, unsigned, ...)

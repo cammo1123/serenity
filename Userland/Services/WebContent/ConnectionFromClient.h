@@ -42,6 +42,7 @@ public:
     PageHost& page_host() { return *m_page_host; }
     PageHost const& page_host() const { return *m_page_host; }
 
+    virtual void load_url(URL const&) override;
 private:
     explicit ConnectionFromClient(NonnullOwnPtr<Core::LocalSocket>);
 
@@ -54,7 +55,6 @@ private:
     virtual void update_system_theme(Core::AnonymousBuffer const&) override;
     virtual void update_system_fonts(DeprecatedString const&, DeprecatedString const&, DeprecatedString const&) override;
     virtual void update_screen_rects(Vector<Gfx::IntRect> const&, u32) override;
-    virtual void load_url(URL const&) override;
     virtual void load_html(DeprecatedString const&, URL const&) override;
     virtual void paint(Gfx::IntRect const&, i32) override;
     virtual void set_viewport_rect(Gfx::IntRect const&) override;

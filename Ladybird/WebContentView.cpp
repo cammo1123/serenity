@@ -8,6 +8,7 @@
 #include "WebContentView.h"
 #include "HelperProcess.h"
 #include "Utilities.h"
+#include "WebContent/WebContentThread.h"
 #include <AK/Assertions.h>
 #include <AK/ByteBuffer.h>
 #include <AK/Format.h>
@@ -19,6 +20,7 @@
 #include <Kernel/API/KeyCode.h>
 #include <LibCore/ArgsParser.h>
 #include <LibCore/EventLoop.h>
+#include <LibCore/Socket.h>
 #include <LibCore/System.h>
 #include <LibCore/Timer.h>
 #include <LibGfx/Bitmap.h>
@@ -47,6 +49,10 @@
 #include <QTextEdit>
 #include <QTimer>
 #include <QToolTip>
+#include <corecrt_io.h>
+#include <fcntl.h>
+#include <fileapi.h>
+#include <winbase.h>
 
 bool is_using_dark_system_theme(QWidget&);
 
@@ -511,12 +517,79 @@ void WebContentView::update_palette(PaletteMode mode)
     client().async_update_system_theme(make_system_theme_from_qt_palette(*this, mode));
 }
 
+#ifdef WEB_CONTENT_THREADED
+ErrorOr<void> start_web_content_thread(QObject* parent, HANDLE read_pipe, HANDLE write_pipe, HANDLE read_passing_pipe, HANDLE write_passing_pipe)
+{
+    auto* web_content_thread = new WebContentThread(parent, read_pipe, write_pipe, read_passing_pipe, write_passing_pipe);
+    web_content_thread->start();
+
+    return {};
+}
+#endif
+
 void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_callgrind_profiling)
 {
-    m_client_state = {};
+#if defined(WEB_CONTENT_THREADED)
+    auto pipe = CreateNamedPipeW(
+        L"\\\\.\\pipe\\WebContent",
+        PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+        1,
+        65536,
+        65536,
+        0,
+        nullptr);
 
+    if (pipe == INVALID_HANDLE_VALUE) {
+        dbgln("WebContent: Failed to create named pipe: {}", GetLastError());
+        return;
+    }
+
+    auto passing_pipe = CreateNamedPipeW(
+        L"\\\\.\\pipe\\WebContentPassing",
+        PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+        1,
+        65536,
+        65536,
+        0,
+        nullptr);
+
+    if (passing_pipe == INVALID_HANDLE_VALUE) {
+        dbgln("WebContent: Failed to create named pipe: {}", GetLastError());
+        return;
+    }
+
+    auto read_pipe = pipe;
+    auto write_pipe = pipe;
+    auto read_passing_pipe = passing_pipe;
+    auto write_passing_pipe = passing_pipe;
+
+    MUST(start_web_content_thread(this, read_pipe, write_pipe, read_passing_pipe, write_passing_pipe));
+
+    dbgln("WebContent: Waiting for connection from WebContentThread...");
+    dbgln("    read_pipe: {}", read_pipe);
+    dbgln("    write_pipe: {}", write_pipe);
+    dbgln("    read_passing_pipe: {}", read_passing_pipe);
+    dbgln("    write_passing_pipe: {}", write_passing_pipe);
+
+    auto socket = MUST(Core::LocalSocket::adopt_fd(_open_osfhandle((intptr_t)read_pipe, 0)));
+    MUST(socket->set_blocking(true));
+
+    auto new_client = MUST(adopt_nonnull_ref_or_enomem(new (nothrow) WebView::WebContentClient(AK::move(socket), *this)));
+    new_client->set_fd_passing_socket(MUST(Core::LocalSocket::adopt_fd(_open_osfhandle((intptr_t)read_passing_pipe, 0))));
+
+    if (enable_callgrind_profiling == WebView::EnableCallgrindProfiling::Yes) {
+        dbgln();
+        dbgln("\033[1;45mLaunched WebContent process under callgrind!\033[0m");
+        dbgln("\033[100mRun `\033[4mcallgrind_control -i on\033[24m` to start instrumentation and `\033[4mcallgrind_control -i off\033[24m` stop it again.\033[0m");
+        dbgln();
+    }
+
+#else
     auto candidate_web_content_paths = get_paths_for_helper_process("WebContent"sv).release_value_but_fixme_should_propagate_errors();
     auto new_client = launch_web_content_process(candidate_web_content_paths, enable_callgrind_profiling).release_value_but_fixme_should_propagate_errors();
+#endif
 
     m_client_state.client = new_client;
     m_client_state.client->on_web_content_process_crash = [this] {
@@ -531,6 +604,8 @@ void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_call
     client().async_set_device_pixels_per_css_pixel(m_device_pixel_ratio);
     update_palette();
     client().async_update_system_fonts(Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query());
+
+    dbgln("WebContent: New client created");
 
     // FIXME: Get the screen rect.
     // client().async_update_screen_rects(GUI::Desktop::the().rects(), GUI::Desktop::the().main_screen_index());

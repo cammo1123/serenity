@@ -88,7 +88,6 @@ void ThreadEventQueue::cancel_all_pending_jobs()
 
 size_t ThreadEventQueue::process()
 {
-    dbgln("ThreadEventQueue::process");
     decltype(m_private->queued_events) events;
     {
         Threading::MutexLocker locker(m_private->mutex);

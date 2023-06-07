@@ -6,6 +6,7 @@
  */
 
 #include "AK/Format.h"
+#include <AK/Singleton.h>
 #include <LibCore/System.h>
 #include <LibIPC/Connection.h>
 #include <LibIPC/Stub.h>
@@ -59,13 +60,30 @@ Core::LocalSocket& ConnectionBase::fd_passing_socket()
 
 ErrorOr<void> ConnectionBase::post_message(Message const& message)
 {
-    dbgln("ConnectionBase::post_message(MESSAGE)");
     return post_message(TRY(message.encode()));
+}
+
+ErrorOr<size_t> write_some(Core::LocalSocket& socket, ReadonlyBytes bytes)
+{
+    size_t total_nwritten = 0;
+    dbgln("Wrote {} bytes to socket", total_nwritten);
+    while (total_nwritten < bytes.size()) {
+        auto res = WriteFile((HANDLE)_get_osfhandle(socket.fd().value()), bytes.data() + total_nwritten, bytes.size() - total_nwritten, nullptr, nullptr);
+        if (res == 0) {
+            auto error = GetLastError();
+            if (error == ERROR_BROKEN_PIPE) {
+                socket.close();
+                return Error::from_string_literal("Broken pipe");
+            }
+            return Error::from_windows_error(error);
+        }
+        total_nwritten += res;
+    }
+    return total_nwritten;
 }
 
 ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
 {
-    dbgln("ConnectionBase::post_message(BUFFER)");
     // NOTE: If this connection is being shut down, but has not yet been destroyed,
     //       the socket will be closed. Don't try to send more messages.
     if (!m_socket->is_open())
@@ -86,7 +104,7 @@ ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
     int writes_done = 0;
     size_t initial_size = bytes_to_write.size();
     while (!bytes_to_write.is_empty()) {
-        auto maybe_nwritten = m_socket->write_some(bytes_to_write);
+        auto maybe_nwritten = write_some(*m_socket, bytes_to_write);
         writes_done++;
         if (maybe_nwritten.is_error()) {
             auto error = maybe_nwritten.release_error();
@@ -94,11 +112,7 @@ ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
                 // FIXME: This is a hacky way to at least not crash on large messages
                 // The limit of 100 writes is arbitrary, and there to prevent indefinite spinning on the EventLoop
                 if (error.code() == EAGAIN && writes_done < 100) {
-#if defined(AK_OS_WINDOWS)
-                    SwitchToThread();
-#else
                     sched_yield();
-#endif
                     continue;
                 }
                 shutdown_with_error(error);
@@ -127,7 +141,6 @@ ErrorOr<void> ConnectionBase::post_message(MessageBuffer buffer)
 
 void ConnectionBase::shutdown()
 {
-    dbgln("IPC::ConnectionBase ({:p}) shutting down.", this);
     m_socket->close();
     die();
 }

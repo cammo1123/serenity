@@ -43,6 +43,7 @@ void Notifier::close()
 
 void Notifier::event(Core::Event& event)
 {
+    dbgln("Notifier: got event of type {} vs {}", (int) event.type(), (int) Core::Event::Type::NotifierActivation);
     if (event.type() == Core::Event::NotifierActivation) {
         if (on_activation)
             on_activation();
