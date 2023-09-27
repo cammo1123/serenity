@@ -162,6 +162,7 @@ void WebContentClient::did_unhover_link()
 
 void WebContentClient::did_click_link(AK::URL const& url, DeprecatedString const& target, unsigned modifiers)
 {
+    dbgln("handle: WebContentClient::DidClickLink! url={}, target={}, modifiers={}", url, target, modifiers);
     if (m_view.on_link_click)
         m_view.on_link_click(url, target, modifiers);
 }

@@ -41,6 +41,23 @@ WebViewImplementationNative::WebViewImplementationNative(jobject thiz)
         env.get()->CallVoidMethod(m_java_instance, on_load_start_method, url_string, is_redirect);
         env.get()->DeleteLocalRef(url_string);
     };
+
+    on_load_finish = [this](auto&) {
+        JavaEnvironment env(global_vm);
+        env.get()->CallVoidMethod(m_java_instance, on_load_finish_method);
+    };
+
+    on_link_click = [this](auto const& url, auto const&, unsigned) {
+        JavaEnvironment env(global_vm);
+        auto url_string = env.jstring_from_ak_string(MUST(url.to_string()));
+        env.get()->CallVoidMethod(m_java_instance, on_load_start_method, url_string);
+        env.get()->DeleteLocalRef(url_string);
+    };
+
+    on_did_layout = [this](auto const& rect) {
+        JavaEnvironment env(global_vm);
+        env.get()->CallVoidMethod(m_java_instance, on_did_layout_method, rect.width(), rect.height());
+    };
 }
 
 void WebViewImplementationNative::create_client(WebView::EnableCallgrindProfiling)
@@ -90,12 +107,36 @@ void WebViewImplementationNative::paint_into_bitmap(void* android_bitmap_raw, An
     }
 }
 
-void WebViewImplementationNative::set_viewport_geometry(int w, int h)
+void WebViewImplementationNative::set_viewport_geometry(int x, int y, int w, int h)
 {
-    m_viewport_rect = { { 0, 0 }, { w, h } };
+    m_viewport_rect = { { x, y }, { w, h } };
     client().async_set_viewport_rect(m_viewport_rect);
     request_repaint();
     handle_resize();
+}
+
+void WebViewImplementationNative::add_scroll_offset(int, int)
+{
+    Gfx::IntPoint screen_position { 10, 10 };
+    Gfx::IntPoint other { 10, 10 };
+    client().async_mouse_wheel(screen_position, other, 0, 0, 0, 0, 2000);
+    dbgln("WebContentView::async_mouse_wheel: {}, {}, {}, {}, {}, {}, {}, {}, {}", screen_position.x(), screen_position.y(), other.x(), other.y(), 0, 0, 0, 0, 2000);
+
+    request_repaint();
+}
+
+void WebViewImplementationNative::set_mouse_down(int x, int y)
+{
+    Gfx::IntPoint position(x, y);
+    auto button = 1; 
+    client().async_mouse_down(to_content_position(position), position, button, 0, 0);
+}
+
+void WebViewImplementationNative::set_mouse_up(int x, int y)
+{
+    Gfx::IntPoint position(x, y);
+    auto button = 1;
+    client().async_mouse_up(to_content_position(position), position, button, 0, 0);
 }
 
 void WebViewImplementationNative::set_device_pixel_ratio(float f)

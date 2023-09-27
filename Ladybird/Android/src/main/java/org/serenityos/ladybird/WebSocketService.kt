@@ -7,9 +7,12 @@
 package org.serenityos.ladybird
 
 import android.os.Message
+import android.util.Log
 
 class WebSocketService : LadybirdServiceBase("WebSocketService") {
     override fun handleServiceSpecificMessage(msg: Message): Boolean {
+        Log.e(TAG, "RequestServerService got a message it doesn't know how to handle!")
+
         return false
     }
 

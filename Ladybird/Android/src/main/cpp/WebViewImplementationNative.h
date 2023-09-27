@@ -26,13 +26,20 @@ public:
 
     void paint_into_bitmap(void* android_bitmap_raw, AndroidBitmapInfo const& info);
 
-    void set_viewport_geometry(int w, int h);
+    void set_viewport_geometry(int x, int y, int w, int h);
+    void add_scroll_offset(int x, int y);
+    void set_mouse_down(int x, int y);
+    void set_mouse_up(int x, int y);
     void set_device_pixel_ratio(float f);
 
     static jclass global_class_reference;
     static jmethodID bind_webcontent_method;
     static jmethodID invalidate_layout_method;
     static jmethodID on_load_start_method;
+    static jmethodID on_load_finish_method;
+    static jmethodID on_link_click_method;
+    static jmethodID on_did_layout_method;
+
 
     jobject java_instance() const { return m_java_instance; }
 

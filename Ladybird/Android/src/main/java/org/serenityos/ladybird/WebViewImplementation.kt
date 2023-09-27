@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.util.Log
 import android.view.View
 import java.net.URL
@@ -41,8 +42,20 @@ class WebViewImplementation(private val view: WebView) {
         nativeDrawIntoBitmap(nativeInstance, bitmap)
     }
 
-    fun setViewportGeometry(w: Int, h: Int) {
-        nativeSetViewportGeometry(nativeInstance, w, h)
+    fun setViewportGeometry(x: Int, y: Int, w: Int, h: Int) {
+        nativeSetViewportGeometry(nativeInstance, x, y, w, h)
+    }
+
+    fun addScrollOffset(x: Int, y: Int) {
+        nativeAddScrollOffset(nativeInstance, x, y)
+    }
+
+    fun setMouseDown(x: Int, y: Int) {
+        nativeSetMouseDown(nativeInstance, x, y)
+    }
+
+    fun setMouseUp(x: Int, y: Int) {
+        nativeSetMouseUp(nativeInstance, x, y)
     }
 
     fun setDevicePixelRatio(ratio: Float) {
@@ -74,12 +87,27 @@ class WebViewImplementation(private val view: WebView) {
         view.onLoadStart(url, isRedirect)
     }
 
+    fun onLoadFinish() {
+        view.onLoadFinish()
+    }
+
+    fun onLinkClick(url: String) {
+        view.onLinkClick(url)
+    }
+
+    fun onDidLayout(w: Int, h: Int) {
+        view.onDidLayout(w, h)
+    }
+
     // Functions implemented in native code
     private external fun nativeObjectInit(): Long
     private external fun nativeObjectDispose(instance: Long)
 
     private external fun nativeDrawIntoBitmap(instance: Long, bitmap: Bitmap)
-    private external fun nativeSetViewportGeometry(instance: Long, w: Int, h: Int)
+    private external fun nativeSetViewportGeometry(instance: Long, x: Int, y: Int, w: Int, h: Int)
+    private external fun nativeAddScrollOffset(intance: Long, x: Int, y: Int)
+    private external fun nativeSetMouseDown(instance: Long, x: Int, y: Int)
+    private external fun nativeSetMouseUp(instance: Long, x: Int, y: Int)
     private external fun nativeSetDevicePixelRatio(instance: Long, ratio: Float)
     private external fun nativeLoadURL(instance: Long, url: String)
 

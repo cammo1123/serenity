@@ -13,6 +13,9 @@ jclass WebViewImplementationNative::global_class_reference;
 jmethodID WebViewImplementationNative::bind_webcontent_method;
 jmethodID WebViewImplementationNative::invalidate_layout_method;
 jmethodID WebViewImplementationNative::on_load_start_method;
+jmethodID WebViewImplementationNative::on_load_finish_method;
+jmethodID WebViewImplementationNative::on_link_click_method;
+jmethodID WebViewImplementationNative::on_did_layout_method;
 
 extern "C" JNIEXPORT void JNICALL
 Java_org_serenityos_ladybird_WebViewImplementation_00024Companion_nativeClassInit(JNIEnv* env, jobject /* thiz */)
@@ -37,6 +40,22 @@ Java_org_serenityos_ladybird_WebViewImplementation_00024Companion_nativeClassIni
     if (!method)
         TODO();
     WebViewImplementationNative::on_load_start_method = method;
+
+    method = env->GetMethodID(WebViewImplementationNative::global_class_reference, "onLoadFinish", "()V");
+    if (!method)
+        TODO();
+    WebViewImplementationNative::on_load_finish_method = method;
+
+    method = env->GetMethodID(WebViewImplementationNative::global_class_reference, "onLinkClick", "(Ljava/lang/String;)V");
+    if (!method)
+        TODO();
+    WebViewImplementationNative::on_link_click_method = method;
+    
+    // int x, int y, int w, int h
+    method = env->GetMethodID(WebViewImplementationNative::global_class_reference, "onDidLayout", "(II)V");
+    if (!method)
+        TODO();
+    WebViewImplementationNative::on_did_layout_method = method;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -71,11 +90,33 @@ Java_org_serenityos_ladybird_WebViewImplementation_nativeDrawIntoBitmap(JNIEnv* 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_org_serenityos_ladybird_WebViewImplementation_nativeSetViewportGeometry(JNIEnv*, jobject /* thiz */, jlong instance, jint w, jint h)
+Java_org_serenityos_ladybird_WebViewImplementation_nativeSetViewportGeometry(JNIEnv*, jobject /* thiz */, jlong instance, jint x, jint y, jint w, jint h)
 {
     auto* impl = reinterpret_cast<WebViewImplementationNative*>(instance);
-    impl->set_viewport_geometry(w, h);
+    impl->set_viewport_geometry(x, y, w, h);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_serenityos_ladybird_WebViewImplementation_nativeAddScrollOffset(JNIEnv*, jobject /* thiz */, jlong instance, jint x, jint y)
+{
+    auto* impl = reinterpret_cast<WebViewImplementationNative*>(instance);
+    impl->add_scroll_offset(x, y);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_serenityos_ladybird_WebViewImplementation_nativeSetMouseDown(JNIEnv*, jobject /* thiz */, jlong instance, jint x, jint y)
+{
+    auto* impl = reinterpret_cast<WebViewImplementationNative*>(instance);
+    impl->set_mouse_down(x, y);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_org_serenityos_ladybird_WebViewImplementation_nativeSetMouseUp(JNIEnv*, jobject /* thiz */, jlong instance, jint x, jint y)
+{
+    auto* impl = reinterpret_cast<WebViewImplementationNative*>(instance);
+    impl->set_mouse_up(x, y);
+}
+
 
 extern "C" JNIEXPORT void JNICALL
 Java_org_serenityos_ladybird_WebViewImplementation_nativeLoadURL(JNIEnv* env, jobject /* thiz */, jlong instance, jstring url)

@@ -77,6 +77,8 @@ abstract class LadybirdServiceBase(protected val TAG: String) : Service() {
         class IncomingHandler(private val service: WeakReference<LadybirdServiceBase>) :
             Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
+                Log.e("ASS", "Service got a message it doesn't know how to handle! ID: ${msg.what}")
+
                 when (msg.what) {
                     MSG_TRANSFER_SOCKETS -> service.get()?.handleTransferSockets(msg)
                         ?: super.handleMessage(msg)

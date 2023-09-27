@@ -341,6 +341,7 @@ void WebContentView::wheelEvent(QWheelEvent* event)
             auto step_y = delta_y * QApplication::wheelScrollLines() * devicePixelRatio();
             int scroll_step_size = verticalScrollBar()->singleStep();
             client().async_mouse_wheel(to_content_position(position), screen_position, button, buttons, modifiers, step_x * scroll_step_size, step_y * scroll_step_size);
+            dbgln("WebContentView::async_mouse_wheel: {}, {}, {}, {}, {}, {}, {}, {}, {}", to_content_position(position).x(), to_content_position(position).y(), screen_position.x(), screen_position.y(), button, buttons, modifiers, step_x * scroll_step_size, step_y * scroll_step_size);
         }
         event->accept();
         return;

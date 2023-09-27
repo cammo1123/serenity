@@ -39,6 +39,14 @@ class LadybirdActivity : AppCompatActivity() {
         view.onLoadStart = { url: String, _ ->
             urlEditText.setText(url, TextView.BufferType.EDITABLE)
         }
+        view.onLoadFinish = {
+            Log.d("Ladybird", "Load finished!")
+        }
+
+        view.onLinkClick = { url: String ->
+            Log.d("Ladybird", "Link clicked: $url")
+        }
+
         urlEditText.setOnEditorActionListener { textView: TextView?, i: Int, _: KeyEvent? ->
             Boolean
             if (i == EditorInfo.IME_ACTION_GO || i == EditorInfo.IME_ACTION_SEARCH) {
@@ -62,7 +70,7 @@ class LadybirdActivity : AppCompatActivity() {
             false
         }
         view.initialize(resourceDir)
-        view.loadURL("https://ladybird.dev")
+        view.loadURL("https://github.com/SerenityOS/serenity");
     }
 
     override fun onStart() {

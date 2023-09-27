@@ -13,6 +13,8 @@ import android.util.Log
 
 class WebContentService : LadybirdServiceBase("WebContentService") {
     override fun handleServiceSpecificMessage(msg: Message): Boolean {
+        Log.e(TAG, "RequestServerService got a message it doesn't know how to handle!")
+
         return false
     }
 
