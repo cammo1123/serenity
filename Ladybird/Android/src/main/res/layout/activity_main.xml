@@ -23,14 +23,14 @@
                 style="@style/Widget.AppCompat.EditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:selectAllOnFocus="true"
                 android:autofillHints="url"
                 android:ems="10"
                 android:hint="@string/url_edit_default"
                 android:imeOptions="actionGo|actionSearch"
                 android:inputType="textUri"
                 android:singleLine="true"
-                android:text="@string/url_edit_default"
-                android:background="@color/white"/>
+                android:text="@string/url_edit_default"/>
         </androidx.appcompat.widget.Toolbar>
     </com.google.android.material.appbar.AppBarLayout>
 

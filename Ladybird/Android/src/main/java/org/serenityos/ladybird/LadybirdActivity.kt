@@ -8,11 +8,14 @@ package org.serenityos.ladybird
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.TextView
 import org.serenityos.ladybird.databinding.ActivityMainBinding
+import java.net.MalformedURLException
+import java.net.URL
 
 class LadybirdActivity : AppCompatActivity() {
 
@@ -39,7 +42,22 @@ class LadybirdActivity : AppCompatActivity() {
         urlEditText.setOnEditorActionListener { textView: TextView?, i: Int, _: KeyEvent? ->
             Boolean
             if (i == EditorInfo.IME_ACTION_GO || i == EditorInfo.IME_ACTION_SEARCH) {
-                view.loadURL(textView!!.text.toString())
+                if ((textView == null) || (textView.text == null))
+                    return@setOnEditorActionListener false
+
+                var url = textView.text.toString()
+                url = try {
+                    URL(url).toString()
+                } catch (e: MalformedURLException) {
+                    "https://$url"
+                }
+
+                view.loadURL(url)
+                urlEditText.clearFocus()
+
+                // Hide the keyboard
+                val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+                inputMethodManager?.hideSoftInputFromWindow(textView.windowToken, 0)
             }
             false
         }
