@@ -22,7 +22,7 @@ import androidx.core.view.ScrollingView
 import kotlin.math.max
 import kotlin.math.min
 
-// FIXME: This should (eventually) implement NestedScrollingChild3 and ScrollingView
+// FIXME: This should (eventually) implement NestedScrollingChild3
 
 class WebView(context: Context, attributeSet: AttributeSet?) : View(context, attributeSet), ScrollingView {
 
@@ -63,6 +63,7 @@ class WebView(context: Context, attributeSet: AttributeSet?) : View(context, att
     override fun computeVerticalScrollRange(): Int {
         return pageHeight - height
     }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         setMeasuredDimension(pageWidth, pageHeight)
     }
@@ -77,6 +78,12 @@ class WebView(context: Context, attributeSet: AttributeSet?) : View(context, att
     var onLoadStart: (url: String, isRedirect: Boolean) -> Unit = { _, _ -> }
     var onLoadFinish: () -> Unit = {}
     var onLinkClick: (url: String) -> Unit = {}
+
+    fun resetScroll() {
+        pageX = 0
+        pageY = 0
+        viewImpl.setViewportGeometry(pageX, pageY, width, height)
+    }
 
     fun initialize(resourceDir: String) {
         viewImpl.initialize(resourceDir)
@@ -97,14 +104,15 @@ class WebView(context: Context, attributeSet: AttributeSet?) : View(context, att
         val pixelDensity = context.resources.displayMetrics.density
         viewImpl.setDevicePixelRatio(pixelDensity)
 
-        // FIXME: Account for scroll offset when view supports scrolling
         viewImpl.setViewportGeometry(this.pageX, this.pageY, w, h)
     }
 
     fun addScrollOffset(dx: Int, dy: Int) {
         this.pageX = min(max(0, this.pageX + dx) , pageWidth - width)
-        this.pageY = min(max(0, this.pageY + dy), pageHeight - height)
-        viewImpl.setViewportGeometry(this.pageX, this.pageY, width, height);
+        // FIXME: One we use NestedScrollingChild3 the toolbar should automatically hide
+        //        For now just manually add 150px of padding to the bottom
+        this.pageY = min(max(0, this.pageY + dy), pageHeight - (height - 150))
+        viewImpl.setViewportGeometry(this.pageX, this.pageY, width, height)
     }
 
     fun setMouseDown(x: Int, y: Int) {
@@ -118,7 +126,7 @@ class WebView(context: Context, attributeSet: AttributeSet?) : View(context, att
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
 
-        viewImpl.drawIntoBitmap(contentBitmap);
+        viewImpl.drawIntoBitmap(contentBitmap)
         canvas?.drawBitmap(contentBitmap, 0f, 0f, null)
     }
 
@@ -126,6 +134,7 @@ class WebView(context: Context, attributeSet: AttributeSet?) : View(context, att
         pageWidth = w
         pageHeight = h
     }
+
 
     class WebViewGestureListener(private val webView: WebView) : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(event: MotionEvent): Boolean {

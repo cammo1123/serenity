@@ -37,6 +37,7 @@ class LadybirdActivity : AppCompatActivity() {
         urlEditText = binding.urlEditText
         view = binding.webView
         view.onLoadStart = { url: String, _ ->
+            view.resetScroll()
             urlEditText.setText(url, TextView.BufferType.EDITABLE)
         }
         view.onLoadFinish = {
@@ -70,7 +71,7 @@ class LadybirdActivity : AppCompatActivity() {
             false
         }
         view.initialize(resourceDir)
-        view.loadURL("https://github.com/SerenityOS/serenity");
+        view.loadURL("https://ladybird.dev/")
     }
 
     override fun onStart() {
